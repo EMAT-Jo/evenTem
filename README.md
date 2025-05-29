@@ -19,7 +19,7 @@ Pre-compiled binaries should be available for Windows, Linux and Apple silicon s
 ```
 git clone https://github.com/EMAT-Jo/EvenTem.git
 ```
-and then to navigate to the eventSTEM directory and use
+and then to navigate to the EvenTem directory and use
 ```
 pip install .
 ```
@@ -37,7 +37,6 @@ vs = vSTEM(nx=N,ny=N,repetitions=repetitions,filename=filename)
 vs.DetectorSize = DetectorSize
 vs.InnerRadia = [vs.DetectorSize//2]
 vs.OuterRadia = [vs.DetectorSize]
-vs.Offsets = [(vs.DetectorSize//2,vs.DetectorSize//2)]
 vs.Run()
 vs.PlotImage()
 
