@@ -1,0 +1,3 @@
+include binaries/*.pyd
+include binaries/*.so
+include binaries/*.dll

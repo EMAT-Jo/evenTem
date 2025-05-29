@@ -1,0 +1,27 @@
+#!/usr/bin/env bash -l
+cd BuildTools
+mkdir build_all_py_mac
+cd build_all_py_mac 
+mkdir build_39
+cd build_39 
+source /Users/arnoannys/miniforge3/bin/activate py39
+cmake -DGPRI_OPTION=OFF -D_TORCH=OFF -DPIXET=OFF -DLOG=OFF ../..
+make
+cd .. 
+mkdir build_310
+cd build_310
+source /Users/arnoannys/miniforge3/bin/activate py310
+cmake -DGPRI_OPTION=OFF -D_TORCH=OFF -DPIXET=OFF -DLOG=OFF ../..
+make
+cd ..
+mkdir build_311
+cd build_311
+source /Users/arnoannys/miniforge3/bin/activate py311
+cmake -DGPRI_OPTION=OFF -D_TORCH=OFF -DPIXET=OFF -DLOG=OFF ../..
+make
+cd ..
+mkdir build_312
+cd build_312
+source /Users/arnoannys/miniforge3/bin/activate py312
+cmake -DGPRI_OPTION=OFF -D_TORCH=OFF -DPIXET=OFF -DLOG=OFF ../..
+make

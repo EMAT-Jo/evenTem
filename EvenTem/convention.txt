@@ -1,0 +1,23 @@
+Convention on spatial coordinates:
+Spatial coordinates in C++ src code are as
+(0,0) . . . . . . .  X
+.
+.
+.
+.
+.
+Y
+
+coordinates in python are as
+(0,0) . . . . . . .  axis 1
+.
+.
+.
+.
+.
+axis 0 
+
+-------------------------------------------------------------
+Convention on random scan patters:
+- moving to a probe position that is before the current probe position (either within the same line or a previous line)
+should always be considered a new repetition, unless a pattern file is specified.

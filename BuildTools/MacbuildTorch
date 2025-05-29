@@ -1,0 +1,9 @@
+#!/bin/bash
+cd BuildTools
+rm -rf mcbuildTorch
+mkdir mcbuildTorch
+cd mcbuildTorch
+cmake -DGPRI_OPTION=ON -DTORCH=OFF -DPIXET=OFF -DLOG=OFF ..
+make
+cp *.so "../include" 
+cp *.so "../../EvenTem/binaries"

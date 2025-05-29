@@ -1,0 +1,9 @@
+#!/bin/bash
+cd BuildTools
+rm -rf mcbuild
+mkdir mcbuild
+cd mcbuild
+cmake -DGPRI_OPTION=OFF -DTORCH=OFF -DPIXET=OFF -DLOG=OFF -DCMAKE_CUDA_FLAGS="--allow-unsupported-compiler" ..
+make
+cp *.so "../include" 
+cp *.so "../../EvenTem/binaries"
