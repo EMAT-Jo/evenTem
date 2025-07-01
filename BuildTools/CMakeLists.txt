@@ -32,6 +32,9 @@ set(SOURCES
     ../EvenTem/src/utils/SocketConnector.h
     ../EvenTem/src/utils/FileConnector.cpp
     ../EvenTem/src/utils/FileConnector.h
+    ../EvenTem/src/utils/FileConnectorMMAP.cpp
+    ../EvenTem/src/utils/FileConnectorMMAP.h
+    ../EvenTem/src/utils/FileHeaderParser.hpp
     ../EvenTem/src/utils/ProgressMonitor.cpp
     ../EvenTem/src/utils/ProgressMonitor.h
     ../EvenTem/src/utils/Logger.hpp
@@ -60,7 +63,7 @@ set(SOURCES
     ../EvenTem/src/detectors/Cheetah_pixeltrig.hpp
     ../EvenTem/src/detectors/Advapix.hpp
     ../EvenTem/src/detectors/Timepix.hpp
-    ../EvenTem/src/detectors/Simulated.hpp
+    ../EvenTem/src/detectors/ElectronFile.hpp
     ../EvenTem/src/detectors/Merlin.hpp
     ../EvenTem/src/detectors/HDF5_DS.hpp
     ../EvenTem/src/pybind.cpp
@@ -74,9 +77,7 @@ if (WIN32)
     # set(FFTW3_DIR ./FFTW)
     # link_directories(${FFTW3_DIR})
 
-    # add_definitions(-DH5_OPTION_ENABLED)
-    set(HDF5_ROOT "C:/Program Files/HDF_Group/HDF5/1.14.3")
-    find_package(HDF5 1.14.3 REQUIRED COMPONENTS CXX)
+    find_package(HDF5 REQUIRED COMPONENTS CXX)
 
     set(BUILD_DIR ${PROJECT_BINARY_DIR}/${CMAKE_BUILD_TYPE})
     message(STATUS "Build directory: ${BUILD_DIR}")
@@ -147,6 +148,9 @@ if (WIN32)
     endif()
 
     pybind11_add_module(eventem ${SOURCES}) 
+
+    #build mmap.cpp to exe
+    add_executable(mmap ../EvenTem/src/mmap.cpp)
 
     if(GPRI_OPTION OR TORCH)
         target_include_directories(eventem PRIVATE ${TORCH_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS})
