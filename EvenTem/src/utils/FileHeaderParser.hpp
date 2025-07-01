@@ -1,7 +1,26 @@
+
+#ifndef FILEHEADERPARSER_HPP
+#define FILEHEADERPARSER_HPP
+
+#ifdef _WIN32
+#include <io.h>
+#pragma warning(disable : 4005 4333 34)
+#else
+#include <unistd.h>
+#endif
+
+#include <iostream>
+#include <limits>
+#include <string>
+#include <fstream>
+#include <filesystem> 
+#include <array>
+#include <sstream>
 #include "FileConnector.h"
 
-int parse_npy_header(std::string &file_path)
+inline std::array<int,5> parse_npy_header(std::string &file_path)
 {
+    std::array<int, 5> header_info = {0, 0, 0, 0, 0}; // Initialize with zeros
 
     FileConnector file;
     file.path = file_path;
@@ -46,36 +65,48 @@ int parse_npy_header(std::string &file_path)
     size_t end = header.find(")", start);
     std::string shape_str = header.substr(start, end - start);
     
-    std::vector<int> shape;
     size_t pos = 0;
+    int count = 0;
     while ((pos = shape_str.find(',')) != std::string::npos) {
-        shape.push_back(std::stoi(shape_str.substr(0, pos)));
+        header_info[count] = std::stoi(shape_str.substr(0, pos));
+        count++;
         shape_str.erase(0, pos + 1);
     }
     if (!shape_str.empty()) {
-        shape.push_back(std::stoi(shape_str));  // Add the last dimension
+        header_info[count] = std::stoi(shape_str);
     }
 
     // Parse dtype
     std::string dtype;
-    int bitdepth;
     dtype = header.substr(find_descr + 10, header.find("'", find_descr + 10) - (find_descr + 10));
     if (dtype == "|u1") {
-        bitdepth = 8;
+        header_info[4] = 8;
     } else if (dtype == "<u2") {
-        bitdepth = 16;
+        header_info[4] = 16;
     } else {
         throw std::runtime_error("Unsupported dtype");
     }
 
-    file.close_file()
+    file.close_file();  
 
-    return bitdepth;
+    return header_info;
 };
 
-void parse_mib_header()
+inline std::array<int,5> parse_mib_header(std::string &file_path)
 {
+    std::array<int, 5> header_info = {0, 0, 0, 0, 0}; // Initialize with zeros
 
+    FileConnector file;
+    file.path = file_path;
+    file.open_file();
+
+    std::string dtype;
+
+    std::string rcv;
+
+    std::array<char, 384> head_buffer;
+    std::array<std::string, 8> head;
+    file.read_data(&head_buffer[0], head_buffer.size());
     rcv.assign(head_buffer.cbegin(), head_buffer.cend());
     size_t i = 0;
     head.fill("");
@@ -89,9 +120,9 @@ void parse_mib_header()
     {
         try
         {
-            ds_merlin = stoi(head[4]) * stoi(head[5]);
-            this->dtype = head[6];
-            std::cout << "dtype: " << this->dtype << std::endl;
+            header_info[2] = stoi(head[4]);
+            header_info[3] = stoi(head[5]);
+            dtype = head[6];
         }
         catch (const std::exception &e)
         {
@@ -102,13 +133,22 @@ void parse_mib_header()
     {
         perror("Frame Header cannot be decoded!");
     }
-    if (this->dtype == "U08")
-            {
-                return 8;
-            }
-            else if (this->dtype == "U16")
-            {
-                return 16;
-            }
 
+    if (dtype == "U08")
+    {
+        header_info[4] = 8;
+    }
+    else if (dtype == "U16")
+    {
+        header_info[4] = 16;
+    }
+    else {
+        throw std::runtime_error("Unsupported dtype");
+    }
+
+    file.close_file();  
+
+    return header_info;
 }
+
+#endif // FILEHEADERPARSER_HPP

@@ -39,19 +39,51 @@
 #include "BoundedThreadPool.hpp"
 #include "FrameBased.hpp"
 
-namespace MERLIN_512{
+namespace MERLIN_512_U8{
     const int N_CAM = 512;
     const int BUFFER_SIZE = 128;
     const int HEAD_SIZE = 768;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
 }; 
-namespace MERLIN_256{
+namespace MERLIN_256_U8{
     const int N_CAM = 256;
     const int BUFFER_SIZE = 128;
     const int HEAD_SIZE = 384;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
+};
+
+namespace MERLIN_512_U16{
+    const int N_CAM = 512;
+    const int BUFFER_SIZE = 128;
+    const int HEAD_SIZE = 768;
+    const int N_BUFFER = 32;
+    using PIXEL = uint16_t;
+};
+
+namespace MERLIN_256_U16{
+    const int N_CAM = 256;
+    const int BUFFER_SIZE = 128;
+    const int HEAD_SIZE = 384;
+    const int N_BUFFER = 32;
+    using PIXEL = uint16_t;
+};
+
+namespace MERLIN_512_U32{
+    const int N_CAM = 512;
+    const int BUFFER_SIZE = 128;
+    const int HEAD_SIZE = 768;
+    const int N_BUFFER = 32;
+    using PIXEL = uint32_t;
+};
+
+namespace MERLIN_256_U32{
+    const int N_CAM = 256;
+    const int BUFFER_SIZE = 128;
+    const int HEAD_SIZE = 384;
+    const int N_BUFFER = 32;
+    using PIXEL = uint32_t;
 };
 
 
@@ -64,9 +96,10 @@ protected:
     {
         int _buffer_id;
         int _frame_id;
+        data_size = static_cast<int>(ds_merlin * sizeof(pixel));
         while (*this->p_processor_line!=-1)
         {
-            if ((this->n_frame_filled < (buffer_size*n_buffer + this->n_frame_processed))) 
+            if ((this->n_frame_filled< (buffer_size*n_buffer + this->n_frame_processed))) 
             {
                 _frame_id = this->n_frame_filled % buffer_size; 
                 _buffer_id = (this->n_frame_filled/buffer_size)%n_buffer;
@@ -74,6 +107,8 @@ protected:
 
                 this->first_frame = false;
                 ++this->n_frame_filled;
+                // this->n_frame_filled += 8; // 8 frames are read at once
+
 
                 #ifdef GPRI_OPTION_ENABLED
                 if ((this->n_frame_filled%buffer_size == 0) && (this->n_buffer_filled < (n_buffer + this->n_buffer_processed))) 
@@ -134,7 +169,6 @@ protected:
         return 0;
     }
 
-
     int decode_tcp_head()
     {
         rcv.assign(tcp_buffer.cbegin(), tcp_buffer.cend());
@@ -152,13 +186,11 @@ protected:
         }
     }
 
-    
     inline void read_data_file(char *buffer, int data_size)
     {
         this->file.read_data(buffer, data_size);
     };
     
-
     inline void read_data_socket(char *buffer, int data_size)
     {
         if (this->socket.read_data(buffer, data_size) == -1)
@@ -222,8 +254,8 @@ protected:
                 }
                 break;
             }
-
         }
+        return false;
     }
 
     inline void decode_head()
@@ -243,7 +275,6 @@ protected:
             {
                 ds_merlin = stoi(head[4]) * stoi(head[5]);
                 this->dtype = head[6];
-                std::cout << "dtype: " << this->dtype << std::endl;
             }
             catch (const std::exception &e)
             {
@@ -263,12 +294,11 @@ protected:
         {
             read_head(false);
         }
-        int data_size = static_cast<int>(ds_merlin * sizeof(pixel));
         char *buffer = reinterpret_cast<char *>(&data[0]);
-        if (b_binary)
-        {
-            data_size /= 8;
-        }
+        // if (b_binary)
+        // {
+        //     data_size /= 8;
+        // }
         switch (this->mode)
         {
             case 0:
@@ -283,10 +313,10 @@ protected:
             }
         }
 
-        if (b_binary)
-        {
-            convert_binary_to_chars(data);
-        }
+        // if (b_binary)
+        // {
+        //     convert_binary_to_chars(data);
+        // }
     };
 
     inline void init_uv()
@@ -434,8 +464,11 @@ public:
     int ds_merlin;
     bool b_raw;
     bool b_binary;
+    bool first_frame = true;
 
     bool swap_endian;
+
+    int data_depth;
 
     MERLIN(
         int &nx,

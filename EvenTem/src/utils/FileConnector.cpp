@@ -48,11 +48,6 @@ void FileConnector::read_data(char *buffer, size_t data_size)
 {
     stream.read(buffer, data_size);
     pos += data_size;
-    // Reset file to the beginning for repeat reading
-    // if (file_size - pos < data_size)
-    // {
-    //     reset_file();
-    // }
 };
 
 void FileConnector::reset_file()

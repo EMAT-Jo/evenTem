@@ -67,10 +67,10 @@ void FourD<BitDepth>::run(){
             cam.terminate();
             break;
         }
-        case CAMERA::SIMULATED:
+        case CAMERA::ELECTRON:
         {
-            using namespace SIMULATED_ADDITIONAL;
-            SIMULATED<EVENT, BUFFER_SIZE, N_BUFFER> cam(
+            using namespace ELECTRON_ADDITIONAL;
+            ELECTRON<EVENT, BUFFER_SIZE, N_BUFFER> cam(
                 nx, 
                 ny, 
                 n_cam,
@@ -91,7 +91,7 @@ void FourD<BitDepth>::run(){
         case CAMERA::MERLIN:
         {
             if (n_cam == 512){ 
-                using namespace MERLIN_512;
+                using namespace MERLIN_512_U8;
                 MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                     nx, 
                     ny, 
@@ -110,7 +110,7 @@ void FourD<BitDepth>::run(){
                 break;
             }
             else if (n_cam == 256){
-                using namespace MERLIN_256;
+                using namespace MERLIN_256_U8;
                 MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                     nx, 
                     ny, 
@@ -133,6 +133,7 @@ void FourD<BitDepth>::run(){
         }
     }
     rc_quit = true;
+    save_dose_image();
     h5file.close();
 }
 

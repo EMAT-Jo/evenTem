@@ -24,7 +24,7 @@ void EELS::run(){
         case CAMERA::MERLIN:
         {
             if (n_cam == 512){ 
-                using namespace MERLIN_512;
+                using namespace MERLIN_512_U8;
                 MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                     nx, 
                     ny, 
@@ -43,7 +43,7 @@ void EELS::run(){
                 break;
             }
             else if (n_cam == 256){
-                using namespace MERLIN_256;
+                using namespace MERLIN_256_U8;
                 MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                     nx, 
                     ny, 

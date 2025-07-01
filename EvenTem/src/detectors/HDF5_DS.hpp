@@ -122,7 +122,7 @@ public:
         {
             case 0:
             {
-                this->data_depth = pre_run();
+                // this->data_depth = pre_run();
                 this->read_thread = std::thread(&HDF5::buffer_reading, this);
                 break;
             }

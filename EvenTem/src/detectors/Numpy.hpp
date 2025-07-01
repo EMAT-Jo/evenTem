@@ -44,6 +44,64 @@ class NUMPY : public FRAMEBASED<n_cam,buffer_size,HEAD_SIZE,n_buffer,pixel>
 {
 protected:
 
+    // void parse_npy_header()
+    // {
+    //     // Read magic string
+    //     char magic[6];
+    //     this->file.read_data(magic, 6);
+    //     if (std::memcmp(magic, "\x93NUMPY", 6) != 0) {
+    //         throw std::runtime_error("Not a valid .npy file");
+    //     }
+
+    //     // Read version number
+    //     uint8_t major_version, minor_version;
+    //     this->file.read_data(reinterpret_cast<char*>(&major_version), 1);
+    //     this->file.read_data(reinterpret_cast<char*>(&minor_version), 1);
+
+    //     int16_t header_len;
+    //     if (major_version == 1){
+    //         this->file.read_data(reinterpret_cast<char*>(&header_len), 2);
+    //         header_len = static_cast<int>(header_len);        
+    //     }
+    //     else{
+    //         throw std::runtime_error("Unsupported version number of npy file, should be version 1 for simple structures");
+    //     }
+
+    //     // Read header
+    //     std::string header(header_len, ' ');
+    //     this->file.read_data(&header[0], header_len);
+
+    //     // Extract shape and dtype
+    //     auto find_shape = header.find("'shape': (");
+    //     auto find_descr = header.find("'descr': '");
+    //     auto find_order = header.find("'fortran_order': ");
+
+    //     if (find_shape == std::string::npos || find_descr == std::string::npos) {
+    //         throw std::runtime_error("Header parsing failed");
+    //     }
+
+    //     // Parse shape
+    //     size_t start = find_shape + 10;
+    //     size_t end = header.find(")", start);
+    //     std::string shape_str = header.substr(start, end - start);
+        
+    //     this->shape.clear();
+    //     size_t pos = 0;
+    //     while ((pos = shape_str.find(',')) != std::string::npos) {
+    //         this->shape.push_back(std::stoi(shape_str.substr(0, pos)));
+    //         shape_str.erase(0, pos + 1);
+    //     }
+    //     if (!shape_str.empty()) {
+    //         this->shape.push_back(std::stoi(shape_str));  // Add the last dimension
+    //     }
+
+    //     // Parse dtype
+    //     this->dtype = header.substr(find_descr + 10, header.find("'", find_descr + 10) - (find_descr + 10));
+
+    //     // Data starts after the header
+    //     this->data_offset = 10 + header_len; // 10 bytes for magic, version, and header length
+    //     this->file.seek_to(this->data_offset);
+    // }
     void parse_npy_header()
     {
         // Read magic string
@@ -66,37 +124,6 @@ protected:
         else{
             throw std::runtime_error("Unsupported version number of npy file, should be version 1 for simple structures");
         }
-
-        // Read header
-        std::string header(header_len, ' ');
-        this->file.read_data(&header[0], header_len);
-
-        // Extract shape and dtype
-        auto find_shape = header.find("'shape': (");
-        auto find_descr = header.find("'descr': '");
-        auto find_order = header.find("'fortran_order': ");
-
-        if (find_shape == std::string::npos || find_descr == std::string::npos) {
-            throw std::runtime_error("Header parsing failed");
-        }
-
-        // Parse shape
-        size_t start = find_shape + 10;
-        size_t end = header.find(")", start);
-        std::string shape_str = header.substr(start, end - start);
-        
-        this->shape.clear();
-        size_t pos = 0;
-        while ((pos = shape_str.find(',')) != std::string::npos) {
-            this->shape.push_back(std::stoi(shape_str.substr(0, pos)));
-            shape_str.erase(0, pos + 1);
-        }
-        if (!shape_str.empty()) {
-            this->shape.push_back(std::stoi(shape_str));  // Add the last dimension
-        }
-
-        // Parse dtype
-        this->dtype = header.substr(find_descr + 10, header.find("'", find_descr + 10) - (find_descr + 10));
 
         // Data starts after the header
         this->data_offset = 10 + header_len; // 10 bytes for magic, version, and header length
@@ -146,26 +173,6 @@ protected:
         read_data_file(buffer, data_size);
     };
 
-    int pre_run()
-    {
-        this->parse_npy_header();
-        if (this->shape.size() != 4) throw std::runtime_error("Numpy dataset is not 4D");
-        if (this->shape[2] != this->shape[3]) throw std::runtime_error("Numpy dataset does not have square detector images");
-
-        std::cout << "shape: scan: " << this->shape[0] << "x" << this->shape[1] << ", detector: " << this->shape[2] << "x" << this->shape[3] << std::endl;
-
-        this->framesize = this->shape[2] * this->shape[3];
-
-        if (this->dtype == "|u1") {
-            std::cout << "dtype: uint8" << std::endl;
-            return 8;
-        } else if (this->dtype == "<u2") {
-            std::cout << "dtype: uint16" << std::endl;
-            return 16;
-        } else {
-            throw std::runtime_error("Unsupported dtype");
-        }
-    }
 
 public:
 
@@ -179,7 +186,7 @@ public:
             {
                 this->file.path = this->file_path;
                 this->file.open_file();
-                this->data_depth = pre_run();
+                this->parse_npy_header();
                 this->read_thread = std::thread(&NUMPY::buffer_reading, this);
                 break;
             }
@@ -221,6 +228,7 @@ public:
         file_path, 
         socket)
     {
+        this->framesize = n_cam * n_cam;
     }
 
 };

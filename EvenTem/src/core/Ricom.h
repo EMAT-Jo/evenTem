@@ -15,48 +15,13 @@
 #ifndef RICOM_H
 #define RICOM_H
 
-#ifdef _WIN32
-#include <io.h>
-#pragma warning(disable : 4005 4333 34)
-#else
-#include <unistd.h>
-#endif
-
-#define _USE_MATH_DEFINES
-#include <cmath>
-
-#include <stdio.h>
 #include <complex>
-#include <cfloat>
-#include <vector>
-#include <string> 
-#include <mutex>
-#include <future>
-#include <thread>
 // #include <fftw3.h>
-#include <chrono>
-#include <algorithm>
-#include <ctime>
+
 
 #include "LiveProcessor.h"
-#include "BoundedThreadPool.hpp"
 // #include "fft2d.hpp"
-#include "SocketConnector.h"
-#include "ProgressMonitor.h"
-#include "Cheetah.hpp"
-#include "Timepix.hpp"
-#include "Advapix.hpp"
-#include "Merlin.hpp"
-#include "Numpy.hpp"
-#include "AnnularDetector.hpp"
-
 #include "vSTEM.h"
-
-#include <pybind11/pybind11.h>
-namespace py = pybind11;
-
-namespace chc = std::chrono;
-
 
 class Ricom_kernel
 {
@@ -105,8 +70,6 @@ private:
     float e_mag_max = -FLT_MAX;
     float e_mag_min = FLT_MAX;
 
-    // inline void rescales_recomputes();
-
     void line_processor(
         size_t &img_num,
         size_t &first_frame,
@@ -139,9 +102,9 @@ public:
     // std::vector<std::atomic<float>> ricom_image;
     std::vector<std::vector<float>> ricom_image_stack;
     
-    std::vector<size_t> dose_data[2];
-    std::vector<size_t> sumx_data[2];
-    std::vector<size_t> sumy_data[2];
+    std::vector<std::vector<size_t>> dose_data;
+    std::vector<std::vector<size_t>> sumx_data;
+    std::vector<std::vector<size_t>> sumy_data;
     std::vector<std::complex<float>> e_field_data;
 
     

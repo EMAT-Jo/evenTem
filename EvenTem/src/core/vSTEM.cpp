@@ -17,7 +17,6 @@
 void vSTEM::run(){
     py::gil_scoped_release release;
     reset();
-    // Run camera dependent pipeline
     switch (camera)
      {
          case CAMERA::ADVAPIX:
@@ -76,10 +75,10 @@ void vSTEM::run(){
             cam.terminate();
             break;
         }
-        case CAMERA::SIMULATED:
+        case CAMERA::ELECTRON:
         {
-            using namespace SIMULATED_ADDITIONAL;
-            SIMULATED<EVENT, BUFFER_SIZE, N_BUFFER> cam(
+            using namespace ELECTRON_ADDITIONAL;
+            ELECTRON<EVENT, BUFFER_SIZE, N_BUFFER> cam(
                 nx, 
                 ny, 
                 n_cam,
@@ -130,48 +129,94 @@ void vSTEM::run(){
         }
         case CAMERA::MERLIN:
         {
-            if (n_cam == 512){ 
-                using namespace MERLIN_512;
-                MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
-                    nx, 
-                    ny, 
-                    &b_cumulative,
-                    rep,
-                    processor_line,
-                    preprocessor_line,
-                    mode,
-                    file_path,
-                    socket
-                );
-                compute_detector();
-                cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
-                cam.run();
-                process_data();
-                cam.terminate();
+            if (bitdepth == 8){
+                if (n_cam == 512){ 
+                    using namespace MERLIN_512_U8;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 256){
+                    using namespace MERLIN_256_U8;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else std::runtime_error("Invalid detector size for Merlin");
                 break;
             }
-            else if (n_cam == 256){
-                using namespace MERLIN_256;
-                MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
-                    nx, 
-                    ny, 
-                    &b_cumulative,
-                    rep,
-                    processor_line,
-                    preprocessor_line,
-                    mode,
-                    file_path,
-                    socket
-                );
-                compute_detector();
-                cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
-                cam.run();
-                process_data();
-                cam.terminate();
-                break;
+            else if (bitdepth == 16){
+                if (n_cam == 512){ 
+                    using namespace MERLIN_512_U16;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 256){
+                    using namespace MERLIN_256_U16;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else std::runtime_error("Invalid detector size for Merlin");
             }
-            else std::runtime_error("Invalid detector size for Merlin");
-            break;
+            else std::runtime_error("Invalid bitdepth for Merlin");
         }
         case CAMERA::HDF5:
         {
@@ -196,24 +241,173 @@ void vSTEM::run(){
         }
         case CAMERA::NUMPY:
         {
-            using namespace FRAME_64_ADDITIONAL;
-            NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
-                nx, 
-                ny, 
-                &b_cumulative,
-                rep,
-                processor_line,
-                preprocessor_line,
-                mode,
-                file_path,
-                socket
-            );
-            compute_detector();
-            cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
-            cam.run();
-            process_data();
-            cam.terminate();
-            break;
+            if (bitdepth == 8) {
+                if (n_cam == 64){ 
+                    using namespace FRAME_64_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 128){ 
+                    using namespace FRAME_128_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 256){ 
+                    using namespace FRAME_256_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 512){ 
+                    using namespace FRAME_512_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else std::runtime_error("Invalid detector size for Numpy");
+            }
+            else if (bitdepth == 16) {
+                if (n_cam == 64){ 
+                    using namespace FRAME_64_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 128){ 
+                    using namespace FRAME_128_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 256){ 
+                    using namespace FRAME_256_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 512){ 
+                    using namespace FRAME_512_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else std::runtime_error("Invalid detector size for Numpy");
+            }
+            else std::runtime_error("Invalid bitdepth for Numpy");
         }
     }
     rc_quit = true;

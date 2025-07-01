@@ -178,10 +178,10 @@ void Ricom::run()
             cam.terminate();
             break;
         }
-        case CAMERA::SIMULATED:
+        case CAMERA::ELECTRON:
         {
-            using namespace SIMULATED_ADDITIONAL;
-            SIMULATED<EVENT, BUFFER_SIZE, N_BUFFER> cam(
+            using namespace ELECTRON_ADDITIONAL;
+            ELECTRON<EVENT, BUFFER_SIZE, N_BUFFER> cam(
             nx, 
             ny, 
             n_cam,
@@ -201,103 +201,273 @@ void Ricom::run()
         }
         case CAMERA::MERLIN:
         {
-            if (n_cam == 512) {
-                using namespace MERLIN_512;
-                MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
-                nx, 
-                ny, 
-                &b_cumulative,
-                rep,
-                processor_line,
-                preprocessor_line,
-                mode,
-                file_path,
-                socket
-                );
-                cam.enable_Ricom(&comx_image,&comy_image);
+            if (bitdepth == 8)
+            {
+                if (n_cam == 512) {
+                    using namespace MERLIN_512_U8;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
 
-                // for (vSTEM *child : vSTEM_children){
-                //     setup_child(child);
-                //     cam.enable_vSTEM(&(child->get_detector()),&child->vSTEM_data,false,false);
-                // }
+                    // for (vSTEM *child : vSTEM_children){
+                    //     setup_child(child);
+                    //     cam.enable_vSTEM(&(child->get_detector()),&child->vSTEM_data,false,false);
+                    // }
 
-                cam.run();
-                std::thread t_self = std::thread(&Ricom::process_data, this);
+                    cam.run();
+                    std::thread t_self = std::thread(&Ricom::process_data, this);
 
-                // for (size_t i = 0; i < vSTEM_children.size(); ++i) {threads_for_children[i] = std::thread(&vSTEM::process_data,vSTEM_children[i]);}
+                    // for (size_t i = 0; i < vSTEM_children.size(); ++i) {threads_for_children[i] = std::thread(&vSTEM::process_data,vSTEM_children[i]);}
 
-                if (t_self.joinable()) t_self.join();
-                // for (auto &t : threads_for_children) {if (t && t->joinable()) {t->join();};}
+                    if (t_self.joinable()) t_self.join();
+                    // for (auto &t : threads_for_children) {if (t && t->joinable()) {t->join();};}
 
-                cam.terminate();
-            }
-            else if (n_cam == 256){ 
-                using namespace MERLIN_256;
-                MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
-                nx, 
-                ny, 
-                &b_cumulative,
-                rep,
-                processor_line,
-                preprocessor_line,
-                mode,
-                file_path,
-                socket
-                );
-                cam.enable_Ricom(&comx_image,&comy_image);
-
-                // for (vSTEM *child : vSTEM_children){
-                //     setup_child(child);
-                //     cam.enable_vSTEM(&(child->get_detector()),&child->vSTEM_data,false,false);
-                // }
-
-                cam.run();
-                std::thread t_self = std::thread(&Ricom::process_data, this);
-
-                // for (size_t i = 0; i < vSTEM_children.size(); ++i) {threads_for_children[i] = std::thread(&vSTEM::process_data,vSTEM_children[i]);}
-
-                if (t_self.joinable()) t_self.join();
-                // for (auto &t : threads_for_children) {if (t && t->joinable()) {t->join();};}
-
-                cam.terminate();   
+                    cam.terminate();
                 }
-            else std::runtime_error("Invalid detector size for Merlin");
+                else if (n_cam == 256){ 
+                    using namespace MERLIN_256_U8;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+
+                    // for (vSTEM *child : vSTEM_children){
+                    //     setup_child(child);
+                    //     cam.enable_vSTEM(&(child->get_detector()),&child->vSTEM_data,false,false);
+                    // }
+
+                    cam.run();
+                    std::thread t_self = std::thread(&Ricom::process_data, this);
+
+                    // for (size_t i = 0; i < vSTEM_children.size(); ++i) {threads_for_children[i] = std::thread(&vSTEM::process_data,vSTEM_children[i]);}
+
+                    if (t_self.joinable()) t_self.join();
+                    // for (auto &t : threads_for_children) {if (t && t->joinable()) {t->join();};}
+
+                    cam.terminate();   
+                    }
+                else std::runtime_error("Invalid detector size for Merlin");
+                break;
+            }
+            else if (bitdepth == 16)
+            {
+                if (n_cam == 512) {
+                    using namespace MERLIN_512_U16;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 256) {
+                    using namespace MERLIN_256_U16;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else std::runtime_error("Invalid detector size for Merlin");
+            }
+            else std::runtime_error("Invalid bitdepth for Merlin");
             break;
         }
         case CAMERA::NUMPY:
         {
-            using namespace FRAME_64_ADDITIONAL;
-            NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
-            nx, 
-            ny, 
-            &b_cumulative,
-            rep,
-            processor_line,
-            preprocessor_line,
-            mode,
-            file_path,
-            socket
-            );
-            cam.enable_Ricom(&comx_image,&comy_image);
-            cam.run();
-            process_data();
-            cam.terminate();
+            if (bitdepth == 8)
+            {
+                if (n_cam == 64) {
+                    using namespace FRAME_64_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 128) {
+                    using namespace FRAME_128_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 256) {
+                    using namespace FRAME_256_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 512) {
+                    using namespace FRAME_512_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else std::runtime_error("Invalid detector size for Numpy");
+            }
+            else if (bitdepth == 16){
+                if (n_cam == 64) {
+                    using namespace FRAME_64_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 128) {
+                    using namespace FRAME_128_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 256) {
+                    using namespace FRAME_256_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 512) {
+                    using namespace FRAME_512_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else std::runtime_error("Invalid detector size for Numpy");
+            }
+            else std::runtime_error("Invalid bitdepth for Numpy");
             break;
         }
     }
     rc_quit = true;
 }
-
-// Rescales the images according to updated min and max values
-// and recomputes the Kernel if settings changed
-// inline void Ricom::rescales_recomputes()
-// {
-//     if (b_recompute_kernel)
-//     {
-//         kernel.compute_kernel();
-//         b_recompute_kernel = false;
-//     }
-// }
 
 // Compute electric field magnitude
 void Ricom::compute_electric_field(std::array<float, 2> &com_xy, size_t id)
@@ -331,7 +501,7 @@ void Ricom::line_processor(
     {
         *processor_line = (int)(prog_mon->fr_count) / nx;
         if (*processor_line%ny==0)
-            id_image = *processor_line / ny % 2;
+            id_image = *processor_line / ny;
         pp_id = (int)(prog_mon->fr_count) % nxy;
         *prog_mon += nx;
 
@@ -381,7 +551,7 @@ void Ricom::line_processor(
         if ((prog_mon->report_set) && (update_line)>0)
         {
             fr_freq = prog_mon->fr_freq;
-            // rescales_recomputes(); 
+ 
             for (int i = 0; i < 2; i++)
             {
                 com_public[i] = com_xy_sum[i] / nx;
@@ -471,10 +641,6 @@ void Ricom::reset()
     rc_quit = false;
     fr_freq = 0;
 
-    std::fill(ricom_image.begin(), ricom_image.end(), 0);
-    std::fill(comx_image.begin(), comx_image.end(), 0);
-    std::fill(comy_image.begin(), comy_image.end(), 0);
-
     // Initializations
     nxy = nx * ny;
     id_image = 0;
@@ -490,12 +656,9 @@ void Ricom::reset()
     ricom_image_stack.assign(rep+1, std::vector<float>(nxy, 0));
     comx_image.assign(nxy, 0);
     comy_image.assign(nxy, 0);
-    for (int i=0; i<2; i++)
-    {
-        dose_data[i].assign(nxy, 0);
-        sumx_data[i].assign(nxy, 0);
-        sumy_data[i].assign(nxy, 0);
-    }
+    dose_data.assign(rep+1, std::vector<size_t>(nxy, 0));
+    sumx_data.assign(rep+1, std::vector<size_t>(nxy, 0));
+    sumy_data.assign(rep+1, std::vector<size_t>(nxy, 0));
 
     // Data Processing Progress
     *processor_line = 0;

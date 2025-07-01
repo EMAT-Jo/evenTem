@@ -12,31 +12,35 @@
  *   Arno Annys <arno.annys@uantwerpen.be>
  */
 
-#ifndef FILE_CONNECTOR_H
-#define FILE_CONNECTOR_H
+#ifndef FILE_CONNECTOR_MMAP_H
+#define FILE_CONNECTOR_MMAP_H
 
-#include <iostream>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <limits>
 #include <string> 
 #include <fstream>
-#include <filesystem> 
 
 
-class FileConnector
+class FileConnectorMmap
 {
 public:
-    std::filesystem::path path;
+    std::string path;
     std::uintmax_t file_size;
     std::uintmax_t pos;
     void open_file();
     void close_file();
-    void read_data(char *buffer, size_t data_size);
-    void seek_to(std::uintmax_t pos);
-    FileConnector();
+    void read_data(void*& mapped_ptr, size_t map_size);
+    FileConnectorMmap();
 
 private:
-    std::ifstream stream;
+    #ifdef _WIN32
+    HANDLE hFile;
+    HANDLE hMap;
+    #endif
+
 
     void reset_file();
 };
-#endif // FILE_CONNECTOR_H
+#endif // FILE_CONNECTOR_MMAP_H

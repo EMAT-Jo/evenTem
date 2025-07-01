@@ -15,43 +15,13 @@
 #ifndef FOURD_H
 #define FOURD_H
 
-#ifdef _WIN32
-#include <io.h>
-#pragma warning(disable : 4005 4333 34)
-#else
-#include <unistd.h>
-#endif
 
-#define _USE_MATH_DEFINES
-#include <cmath>
-
-#include <stdio.h>
-#include <cfloat>
-#include <vector>
-#include <string>
-#include <mutex>
-#include <future>
-#include <thread>
-#include <chrono>
-#include <algorithm>
-#include <ctime>
 #include <numeric>
 #include <type_traits>
 #include <cstdint> 
 
 #include "LiveProcessor.h"
-#include "BoundedThreadPool.hpp"
-#include "SocketConnector.h"
-#include "ProgressMonitor.h"
-#include "Cheetah.hpp"
-#include "Timepix.hpp"
-#include "Advapix.hpp"
-#include "Simulated.hpp"
-#include "Merlin.hpp"
 
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
-namespace py = pybind11;
 
 #include "H5Cpp.h"
 

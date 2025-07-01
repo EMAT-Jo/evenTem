@@ -37,10 +37,8 @@
 
 namespace CHEETAH_ADDITIONAL
 {
-    // const size_t BUFFER_SIZE = 1024;
-    // const size_t N_BUFFER = 512;
-    const size_t BUFFER_SIZE = 4096;
-    const size_t N_BUFFER = 2048;
+    const size_t BUFFER_SIZE = 1048576;
+    const size_t N_BUFFER = 1024;
     using EVENT = uint64_t;
 }; 
 
@@ -276,7 +274,7 @@ private:
             else
             {
                 this->process_wait++;
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
             }
         }
     };
@@ -381,7 +379,7 @@ private:
                 if (most_advanced_line%this->ny == 0)
                 {
                     this->id_image = most_advanced_line / this->ny ;
-                    this->flush_image(this->id_image);
+                    // this->flush_image(this->id_image);
                 }
             }
 

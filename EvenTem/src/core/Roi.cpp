@@ -37,9 +37,9 @@ void Roi::run(){
             );
             if (b_ROI_4D)
             {
-                if (bitdepth == 8) cam.enable_roi_4D(Roi_4D_8,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
-                else if (bitdepth == 16) cam.enable_roi_4D(Roi_4D_16,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
-                else if (bitdepth == 32) cam.enable_roi_4D(Roi_4D_32,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                if (roi_bitdepth == 8) cam.enable_roi_4D(Roi_4D_8,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                else if (roi_bitdepth == 16) cam.enable_roi_4D(Roi_4D_16,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                else if (roi_bitdepth == 32) cam.enable_roi_4D(Roi_4D_32,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
             }
             else if (use_mask)
             {
@@ -71,9 +71,9 @@ void Roi::run(){
             );
             if (b_ROI_4D)
             {
-                if (bitdepth == 8) cam.enable_roi_4D(Roi_4D_8,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
-                else if (bitdepth == 16) cam.enable_roi_4D(Roi_4D_16,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
-                else if (bitdepth == 32) cam.enable_roi_4D(Roi_4D_32,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                if (roi_bitdepth == 8) cam.enable_roi_4D(Roi_4D_8,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                else if (roi_bitdepth == 16) cam.enable_roi_4D(Roi_4D_16,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                else if (roi_bitdepth == 32) cam.enable_roi_4D(Roi_4D_32,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
             }
             else if (use_mask)
             {
@@ -105,9 +105,9 @@ void Roi::run(){
             );
             if (b_ROI_4D)
             {
-                if (bitdepth == 8) cam.enable_roi_4D(Roi_4D_8,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
-                else if (bitdepth == 16) cam.enable_roi_4D(Roi_4D_16,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
-                else if (bitdepth == 32) cam.enable_roi_4D(Roi_4D_32,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                if (roi_bitdepth == 8) cam.enable_roi_4D(Roi_4D_8,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                else if (roi_bitdepth == 16) cam.enable_roi_4D(Roi_4D_16,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                else if (roi_bitdepth == 32) cam.enable_roi_4D(Roi_4D_32,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
             }
             else if (use_mask)
             {
@@ -122,10 +122,10 @@ void Roi::run(){
             cam.terminate();
             break;
         }
-        case CAMERA::SIMULATED:
+        case CAMERA::ELECTRON:
         {
-            using namespace SIMULATED_ADDITIONAL;
-            SIMULATED<EVENT, BUFFER_SIZE, N_BUFFER> cam(
+            using namespace ELECTRON_ADDITIONAL;
+            ELECTRON<EVENT, BUFFER_SIZE, N_BUFFER> cam(
                 nx, 
                 ny, 
                 n_cam,
@@ -139,9 +139,9 @@ void Roi::run(){
             );
             if (b_ROI_4D)
             {
-                if (bitdepth == 8) cam.enable_roi_4D(Roi_4D_8,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
-                else if (bitdepth == 16) cam.enable_roi_4D(Roi_4D_16,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
-                else if (bitdepth == 32) cam.enable_roi_4D(Roi_4D_32,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                if (roi_bitdepth == 8) cam.enable_roi_4D(Roi_4D_8,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                else if (roi_bitdepth == 16) cam.enable_roi_4D(Roi_4D_16,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                else if (roi_bitdepth == 32) cam.enable_roi_4D(Roi_4D_32,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
             }
             else if (use_mask)
             {
@@ -158,97 +158,339 @@ void Roi::run(){
         }
         case CAMERA::MERLIN:
         {
-            if (n_cam == 512){
-                using namespace MERLIN_512;
-                MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
-                    nx, 
-                    ny, 
-                    &b_cumulative,
-                    rep,
-                    processor_line,
-                    preprocessor_line,
-                    mode,
-                    file_path,
-                    socket
-                );
-                if (b_ROI_4D)
-                {
-                    // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+            if (bitdepth == 8){
+                if (n_cam == 512){
+                    using namespace MERLIN_512_U8;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
                 }
-                else
-                {
-                    cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                else if (n_cam == 256){
+                    using namespace MERLIN_256_U8;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
                 }
-                cam.run();
-                process_data();
-                cam.terminate();
+                else std::runtime_error("Invalid detector size for Merlin");
             }
-            else if (n_cam == 256){
-                using namespace MERLIN_256;
-                MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
-                    nx, 
-                    ny, 
-                    &b_cumulative,
-                    rep,
-                    processor_line,
-                    preprocessor_line,
-                    mode,
-                    file_path,
-                    socket
-                );
-                if (b_ROI_4D)
-                {
-                    // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+            else if (bitdepth == 16){
+                if (n_cam == 512){
+                    using namespace MERLIN_512_U16;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
                 }
-                else
-                {
-                    cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                else if (n_cam == 256){
+                    using namespace MERLIN_256_U16;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
                 }
-                cam.run();
-                process_data();
-                cam.terminate();
+                else std::runtime_error("Invalid detector size for Merlin");
             }
-            else std::runtime_error("Invalid detector size for Merlin");
+            else std::runtime_error("Invalid bitdepth for Merlin");
             break;
         }
-        // case CAMERA::NUMPY:
-        // {
-        //     if (n_cam == 512) using namespace FRAME_512_ADDITIONAL;
-        //     else if (n_cam == 256) using namespace FRAME_256_ADDITIONAL;
-        //     else if (n_cam == 128) using namespace FRAME_128_ADDITIONAL;
-        //     else if (n_cam == 64) using namespace FRAME_64_ADDITIONAL;
-        //     else {
-        //         using namespace FRAME_64_ADDITIONAL;
-        //         std::runtime_error("Invalid frame size, only 64, 128, 256, 512 are supported");
-        //         }
-        //     NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER> cam(
-        //         nx, 
-        //         ny, 
-        //         &b_cumulative,
-        //         rep,
-        //         processor_line,
-        //         preprocessor_line,
-        //         mode,
-        //         file_path,
-        //         socket
-        //     );
-        //     if (b_ROI_4D)
-        //     {
-        //         cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
-        //     }
-        //     else
-        //     {
-        //         cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
-        //     }
-        //     cam.run();
-        //     process_data();
-        //     cam.terminate();
-        //     break;
-        // }
+        case CAMERA::NUMPY:
+        {
+            if (bitdepth == 8) 
+            {
+                if (n_cam == 512)
+                {
+                    using namespace FRAME_512_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 256)
+                {
+                    using namespace FRAME_256_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 128)
+                {
+                    using namespace FRAME_128_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 64)
+                {
+                    using namespace FRAME_64_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else std::runtime_error("Invalid detector size for Numpy");
+            }
+            else if (bitdepth == 16) 
+            {
+                if (n_cam == 512)
+                {
+                    using namespace FRAME_512_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 256)
+                {
+                    using namespace FRAME_256_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 128)
+                {
+                    using namespace FRAME_128_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data(); 
+                    cam.terminate();
+                }
+                else if (n_cam == 64)
+                {
+                    using namespace FRAME_64_U16;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else std::runtime_error("Invalid detector size for Numpy");
+            }
+            else std::runtime_error("Invalid bitdepth for Numpy");
+            break;
+        }
     }
-
-    rc_quit = true;
- }
+    rc_quit = true; 
+}
 
 
 void Roi::set_roi(int x , int y, int width, int height)
@@ -300,9 +542,9 @@ void Roi::set_roi_mask(std::vector<py::array_t<int>> arrays){
 
 void Roi::set_bitdepth(int _bitdepth)
 {
-    if (_bitdepth == 8) bitdepth = 8;
-    else if (_bitdepth == 16) bitdepth = 16;
-    else if (_bitdepth == 32) bitdepth = 32;
+    if (_bitdepth == 8) roi_bitdepth = 8;
+    else if (_bitdepth == 16) roi_bitdepth = 16;
+    else if (_bitdepth == 32) roi_bitdepth = 32;
     else
     {
         throw std::invalid_argument("Invalid bitdepth, only 8 , 16 or 32 are supported");
@@ -327,9 +569,9 @@ void Roi::reset()
 
     if (b_ROI_4D)
     {
-        if (bitdepth == 8 ) Roi_4D_8->init(L_1,L_0,n_cam,det_bin);
-        else if (bitdepth == 16)  Roi_4D_16->init(L_1,L_0,n_cam,det_bin);
-        else if (bitdepth == 32)  Roi_4D_32->init(L_1,L_0,n_cam,det_bin);
+        if (roi_bitdepth == 8 ) Roi_4D_8->init(L_1,L_0,n_cam,det_bin);
+        else if (roi_bitdepth == 16)  Roi_4D_16->init(L_1,L_0,n_cam,det_bin);
+        else if (roi_bitdepth == 32)  Roi_4D_32->init(L_1,L_0,n_cam,det_bin);
     }
 
     // Data Processing Progress

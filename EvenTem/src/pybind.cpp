@@ -24,7 +24,7 @@
 #include "Pacbed.h"
 #include "Var.h"
 #include "Roi.h"
-#include "Electron.h"
+#include "core/Electron.h"
 #include "EELS.h"
 #include "FourD.h"
 
@@ -64,6 +64,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readonly("reached_pp_id", &LiveProcessor::reached_pp_id)
         .def("set_pattern_file", &LiveProcessor::set_pattern_file)
         .def_readonly("processing_rate", &LiveProcessor::processing_rate)
+        .def_readonly("processor_line", &LiveProcessor::processor_line)
         .def("set_file", &LiveProcessor::set_file);
 
 
@@ -101,7 +102,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def(py::init<const std::string&, int, int,int>(), py::arg("output_filename"), py::arg("repetitions"), py::arg("bitdepth"),py::arg("compression_factor"))
         .def("run", &FourD<8>::run)
         .def("allocate_chunk", &FourD<8>::allocate_chunk)
-        .def("save_dose_image", &FourD<8>::save_dose_image)
+        // .def("save_dose_image", &FourD<8>::save_dose_image)
         .def("init_4D_file", &FourD<8>::init_4D_file)
         .def_readwrite("det_bin", &FourD<8>::det_bin)
         .def_readwrite("scan_bin", &FourD<8>::scan_bin)
@@ -113,7 +114,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def(py::init<const std::string&, int, int,int>(), py::arg("output_filename"), py::arg("repetitions"), py::arg("bitdepth"),py::arg("compression_factor"))
         .def("run", &FourD<16>::run)
         .def("allocate_chunk", &FourD<16>::allocate_chunk)
-        .def("save_dose_image", &FourD<16>::save_dose_image)
+        // .def("save_dose_image", &FourD<16>::save_dose_image)
         .def("init_4D_file", &FourD<16>::init_4D_file)
         .def_readwrite("det_bin", &FourD<16>::det_bin)
         .def_readwrite("scan_bin", &FourD<16>::scan_bin)
@@ -125,7 +126,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def(py::init<const std::string&, int, int,int>(), py::arg("output_filename"), py::arg("repetitions"), py::arg("bitdepth"),py::arg("compression_factor"))
         .def("run", &FourD<32>::run)
         .def("allocate_chunk", &FourD<32>::allocate_chunk)
-        .def("save_dose_image", &FourD<32>::save_dose_image)
+        // .def("save_dose_image", &FourD<32>::save_dose_image)
         .def("init_4D_file", &FourD<32>::init_4D_file)
         .def_readwrite("det_bin", &FourD<32>::det_bin)
         .def_readwrite("scan_bin", &FourD<32>::scan_bin)
@@ -178,6 +179,8 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def(py::init<int>(),py::arg("repetitions"))
         .def("run", &Var::run)
         .def("set_offset", &Var::set_offset)
+        .def_readwrite("inner_radius", &Var::inner_radius)
+        .def_readwrite("outer_radius", &Var::outer_radius)
         .def_readonly("offset", &Var::offset)
         .def_readonly("Var_image", &Var::Var_image);
 

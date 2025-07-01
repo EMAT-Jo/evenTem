@@ -34,11 +34,12 @@
 #include "FileConnector.h"
 #include "Timepix.hpp"
 
+#define mmap_buffer_size 4194304 
 
 namespace ADVAPIX_ADDITIONAL
 {   
-    const size_t BUFFER_SIZE = 14400;
-    const size_t N_BUFFER = 1024;
+    const size_t BUFFER_SIZE = 65536;
+    const size_t N_BUFFER = 512;
 
     PACK(struct EVENT
     {
@@ -163,7 +164,9 @@ private:
                     {
                         case 0:
                             process_buffer(&(this->buffer[buffer_id]));
+                            // process_mmap_buffer(static_cast<event*>(this->mmap_buffer[buffer_id]));
                             // event_parsing_pool->push_task([=]{process_buffer(&(this->buffer[buffer_id]));});
+                            // event_parsing_pool->push_task([=]{process_mmap_buffer(static_cast<event*>(this->mmap_buffer[buffer_id]));});
                             break;
                         case 1:
                             std::cout << (*p_ragged_buffer_sizes)[buffer_id] << std::endl;
@@ -235,6 +238,30 @@ private:
         }
     };
 
+    inline void process_mmap_buffer(event* mmap)
+    {
+        for (int j = 0; j < mmap_buffer_size; j++)
+        {
+            if (!this->repetitions_reached) 
+            {
+                process_event(&mmap[j]);
+            }
+        }
+
+        if (!this->repetitions_reached) 
+        {
+            this->probe_position_total = mmap[mmap_buffer_size].toa * 25 / this->dt;
+            this->current_line = floor(this->probe_position_total / this->nx);
+            this->id_image = this->probe_position_total / this->nxy;
+        }
+        else 
+        {
+            this->current_line =  this->ny * this->repetitions;
+            this->probe_position_total = this->nxy*this->repetitions+1;
+            this->id_image = this->repetitions;
+        }
+    };
+
     uint64_t latest_pp = 0;
     
     inline void process_event(event *packet)
@@ -244,11 +271,11 @@ private:
         uint16_t _ky = packet->index / this->n_cam;
         uint16_t _id_image = _probe_position_total / this->nxy;
 
-        // if (_probe_position_total >= this->nxy*this->repetitions) 
-        // {
-        //     this->repetitions_reached = true;
-        //     return;
-        // }
+        if (_probe_position_total >= this->nxy*this->repetitions) 
+        {
+            this->repetitions_reached = true;
+            return;
+        }
 
         switch(this->functionType)
         {
@@ -389,6 +416,10 @@ public:
                 this->file.path = this->file_path;
                 this->file.open_file();
                 this->read_thread = std::thread(&ADVAPIX<event, buffer_size, n_buffer>::read_file, this);
+
+                // this->mmap.path = this->file_path;
+                // this->mmap.open_file();
+                // this->read_thread = std::thread(&ADVAPIX<event, buffer_size, n_buffer>::read_mmap, this);
                 break;
             }
             case 1:
@@ -432,7 +463,7 @@ public:
         dt(dt)
         {this->n_cam = 256;
         if (dt == 0) std::cout << "Dwell time not provided!" << std::endl;
-        // event_parsing_pool->init(1, 16);
+        // event_parsing_pool->init(2, 16);
         }
 
     #ifdef PIXET_ENABLED

@@ -43,37 +43,68 @@
     #include <cuda_runtime_api.h>
 #endif
 
-
-namespace FRAME_64_ADDITIONAL{
+namespace FRAME_64_U8{
     const int N_CAM = 64;
     const int BUFFER_SIZE = 128;
-    const int HEAD_SIZE = 768;
+    const int HEAD_SIZE = 0;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
 }; 
 
-namespace FRAME_128_ADDITIONAL{
+namespace FRAME_128_U8{
     const int N_CAM = 128;
     const int BUFFER_SIZE = 128;
-    const int HEAD_SIZE = 768;
+    const int HEAD_SIZE = 0;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
 }; 
 
-namespace FRAME_256_ADDITIONAL{
+namespace FRAME_256_U8{
     const int N_CAM = 256;
     const int BUFFER_SIZE = 128;
-    const int HEAD_SIZE = 768;
+    const int HEAD_SIZE = 0;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
 }; 
 
-namespace FRAME_512_ADDITIONAL{
+namespace FRAME_512_U8{
     const int N_CAM = 512;
     const int BUFFER_SIZE = 128;
-    const int HEAD_SIZE = 768;
+    const int HEAD_SIZE = 0;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
+};
+
+namespace FRAME_64_U16{
+    const int N_CAM = 64;
+    const int BUFFER_SIZE = 128;
+    const int HEAD_SIZE = 0;
+    const int N_BUFFER = 32;
+    using PIXEL = uint16_t;
+}; 
+
+namespace FRAME_128_U16{
+    const int N_CAM = 128;
+    const int BUFFER_SIZE = 128;
+    const int HEAD_SIZE = 0;
+    const int N_BUFFER = 32;
+    using PIXEL = uint16_t;
+}; 
+
+namespace FRAME_256_U16{
+    const int N_CAM = 256;
+    const int BUFFER_SIZE = 128;
+    const int HEAD_SIZE = 0;
+    const int N_BUFFER = 32;
+    using PIXEL = uint16_t;
+}; 
+
+namespace FRAME_512_U16{
+    const int N_CAM = 512;
+    const int BUFFER_SIZE = 128;
+    const int HEAD_SIZE = 0;
+    const int N_BUFFER = 32;
+    using PIXEL = uint16_t;
 };
 
 
@@ -81,20 +112,37 @@ template <int n_cam,int buffer_size, int HEAD_SIZE, int n_buffer, typename pixel
 class FRAMEBASED
 {
 protected:
+    FileConnector file;
+    std::thread read_thread;
+    std::thread proc_thread;
+    int buffer_id;
+    int n_frame_filled=0;
+    int n_frame_processed=0;
+    int n_buffer_filled=0;
+    int n_buffer_processed=0;
+    uint8_t id_image = 0 ;
+    uint64_t current_line = 0;
+    uint64_t probe_position = 0;
+    uint64_t probe_position_total = 0;
+    uint64_t n_events_processed = 0;
+    int frame_id;
+
+
+
     // ----------------------------------------------------------------------------------------------- 
     // process methods
     // -----------------------------------------------------------------------------------------------
     #ifdef FRAMEBASED_TORCH_ENABLED
     inline void vstem_torch()
     {
-        (*p_stem_data)[0][probe_position] += (torch::mul(Tensor_buffer[buffer_id].index({frame_id}),DetectorTensor)).sum().item().to<uint64_t>();
+        (*p_stem_data)[id_image][probe_position] += (torch::mul(Tensor_buffer[buffer_id].index({frame_id}),DetectorTensor)).sum().item().to<uint64_t>();
     };
     #endif
     inline void vstem()
     {
         for (int active_pixel : detector_list) 
         {
-            (*p_stem_data)[0][probe_position] += (size_t)frame_buffer[buffer_id][frame_id][active_pixel];
+            (*p_stem_data)[id_image][probe_position] += (size_t)frame_buffer[buffer_id][frame_id][active_pixel];
         };
     };
 
@@ -127,7 +175,6 @@ protected:
             dose += sum_x_temp;
         }
     
-
         if (dose > 0)
         {
             for (int i = 0; i < n_cam; i++)
@@ -138,23 +185,23 @@ protected:
             {
                 COM[1] += sum_y[i] * u[i];
             }
-            (*p_comx_image)[probe_position] = COM[0] / dose;
-            (*p_comy_image)[probe_position] = COM[1] / dose;
+            (*p_comx_image)[probe_position] = COM[1] / dose;
+            (*p_comy_image)[probe_position] = COM[0] / dose;
         }
     }
 
-    #ifdef GPRI_OPTION_ENABLED
+    #ifdef GPRI_OPTION_ENABLED 
     void GPRI()
     {
-
+        
     };
 
     void SparseGPRI()
     {
         for (int k = 0; k < n_cam*n_cam; k++){
             if (frame_buffer[buffer_id][frame_id][k] != 0){
-                int _kx = k/n_cam;
-                int _ky = k%n_cam;
+                int _ky = k/n_cam;
+                int _kx = k%n_cam;
                 
                 (*p_k_indices_vec)[probe_position+id_image*GPRI_nxy_scan_bin]->push_back((_kx/GPRI_detector_bin)*GPRI_cam_bin+(_ky/GPRI_detector_bin));
                 (*p_N_electrons_map_scangrid)[id_image][probe_position] += 1;
@@ -215,21 +262,7 @@ protected:
     };
 
 
-    FileConnector file;
-    std::thread read_thread;
-    std::thread proc_thread;
-    int buffer_id;
-    int n_frame_filled=0;
-    int n_frame_processed=0;
-    int n_buffer_filled=0;
-    int n_buffer_processed=0;
-    uint8_t id_image = 0 ;
-    uint64_t current_line = 0;
-    uint64_t probe_position = 0;
-    uint64_t probe_position_total = 0;
-    uint64_t n_events_processed = 0;
-    bool first_frame = true;
-    int frame_id;
+    
 
     inline void schedule_buffer()
     {
@@ -241,14 +274,17 @@ protected:
                 for (int frm = 0; frm < buffer_size; frm++)
                 {
                     this->frame_id = this->n_frame_processed % buffer_size;
-                    if ((this->n_frame_processed%nx) != (nx-1)){this->process[0]();}
+                    // if ((this->n_frame_processed%nx) != (nx-1)){this->process[0]();}
+                    if (this->n_frame_processed < nxy){this->process[0]();}
+                    // this->process[0]();
                     // if ((this->n_frame_processed%nx) != (nx-1)){
                     //     for (int i = 0; i < n_proc; i++) {this->process[i]();}
                     // }
 
                     ++this->n_frame_processed;
-                    this->probe_position = this->n_frame_processed;
+                    this->probe_position = this->n_frame_processed % nxy;
                     this->current_line = this->n_frame_processed / ny ;
+                    this->id_image = this->current_line / ny;
                     *this->p_preprocessor_line = (int)this->current_line-1;
                     if ((int)this->current_line == ny){*this->p_preprocessor_line = ny;}
 
@@ -472,7 +508,6 @@ public:
     int nxy;
     bool *b_cumulative;
     int repetitions;
-    int data_depth;
 
     bool frame_torch_enabled = false;
 
@@ -584,13 +619,11 @@ public:
     std::string dtype;
 
     // Data Properties
-    int ds_merlin;
-    bool b_raw;
-    bool b_binary;
+    int data_size;
 
     typedef std::array<pixel,n_cam*n_cam> frame;
 
-    std::array<frame*, n_buffer> frame_buffer;
+    std::array<frame*, n_buffer> frame_buffer; 
 
     uint64_t starttime;
     uint64_t endtime;

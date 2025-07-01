@@ -15,48 +15,8 @@
 #ifndef ROI_H
 #define ROI_H
 
-#ifdef _WIN32
-#include <io.h>
-#pragma warning(disable : 4005 4333 34)
-#else
-#include <unistd.h>
-#endif
-
-#define _USE_MATH_DEFINES
-#include <cmath>
-
-#include <stdio.h>
-#include <cfloat>
-#include <vector>
-#include <string>
-#include <mutex>
-#include <future>
-#include <thread>
-#include <chrono>
-#include <algorithm>
-#include <ctime>
-
 #include "LiveProcessor.h"
-#include "BoundedThreadPool.hpp"
-#include "SocketConnector.h"
-#include "ProgressMonitor.h"
-#include "Cheetah.hpp"
-#include "Timepix.hpp"
-#include "Advapix.hpp"
-#include "Simulated.hpp"
-#include "Merlin.hpp"
-#include "Numpy.hpp"
-#include "FrameBased.hpp"
-#include "Cheetah_pixeltrig.hpp"
 #include "Roi4D.hpp"
-
-
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <pybind11/numpy.h>
-namespace py = pybind11;
-
-
 
 class Roi : public LiveProcessor
 {
@@ -66,7 +26,7 @@ public:
 
     bool b_ROI_4D;
     int det_bin = 1;
-    int bitdepth = 8;
+    int roi_bitdepth = 8;
     
     std::vector<uint64_t> Roi_diffraction_pattern;
     std::vector<uint64_t> Roi_scan_image;
@@ -118,11 +78,11 @@ public:
     }
 
     py::array get_4D() {
-        if (bitdepth == 8) {
+        if (roi_bitdepth == 8) {
             return create_py_array<uint8_t>(Roi_4D_8->data);
-        } else if (bitdepth == 16) {
+        } else if (roi_bitdepth == 16) {
             return create_py_array<uint16_t>(Roi_4D_16->data);
-        } else if (bitdepth == 32) {
+        } else if (roi_bitdepth == 32) {
             return create_py_array<uint32_t>(Roi_4D_32->data);
         } else {
             throw std::runtime_error("Unsupported bitdepth");

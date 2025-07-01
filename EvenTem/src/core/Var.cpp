@@ -35,7 +35,7 @@ void Var::run(){
                 file_path,
                 socket
             );
-            cam.enable_var(&Var_data, offset);
+            cam.enable_var(&Var_data, offset, inner_radius, outer_radius);
             cam.run();
             process_data();
             cam.terminate();
@@ -56,16 +56,16 @@ void Var::run(){
                 file_path,
                 socket
             );
-            cam.enable_var(&Var_data, offset);
+            cam.enable_var(&Var_data, offset, inner_radius, outer_radius);
             cam.run();
             process_data();
             cam.terminate();
             break;
         }
-        case CAMERA::SIMULATED:
+        case CAMERA::ELECTRON:
         {
-            using namespace SIMULATED_ADDITIONAL;
-            SIMULATED<EVENT, BUFFER_SIZE, N_BUFFER> cam(
+            using namespace ELECTRON_ADDITIONAL;
+            ELECTRON<EVENT, BUFFER_SIZE, N_BUFFER> cam(
                 nx, 
                 ny, 
                 n_cam,
@@ -77,7 +77,7 @@ void Var::run(){
                 file_path,
                 socket
             );
-            cam.enable_var(&Var_data, offset);
+            cam.enable_var(&Var_data, offset, inner_radius, outer_radius);
             cam.run();
             process_data();
             cam.terminate();

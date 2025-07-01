@@ -36,14 +36,26 @@
 #include <algorithm>
 #include <ctime>
 
+
+#include "FileHeaderParser.hpp"
 #include "BoundedThreadPool.hpp"
 #include "SocketConnector.h"
 #include "ProgressMonitor.h"
 #include "Cheetah.hpp"
+#include "Cheetah_pixeltrig.hpp"
 #include "Timepix.hpp"
 #include "Advapix.hpp"
-#include "Simulated.hpp"
+#include "ElectronFile.hpp"
+#include "Merlin.hpp"
+#include "Numpy.hpp"
+#include "HDF5_DS.hpp"
+#include "AtomicWrapper.hpp"
+#include "AnnularDetector.hpp"
 
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <pybind11/numpy.h>
+namespace py = pybind11;
 
 namespace CAMERA
 { 
@@ -53,7 +65,7 @@ namespace CAMERA
         ADVARAW,
         CHEETAH,
         CHEETAH_PIXELTRIG,
-        SIMULATED,
+        ELECTRON,
         MERLIN,
         NUMPY,
         HDF5,
@@ -112,6 +124,8 @@ public:
     int *processor_line = new int;
     int *preprocessor_line  = new int;
     int id_image;
+
+    int bitdepth;
 
     // Variables for progress and performance
     int n_threads;

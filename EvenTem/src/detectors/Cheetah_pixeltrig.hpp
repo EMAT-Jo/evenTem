@@ -255,7 +255,7 @@ private:
                 if (most_advanced_probe_count%this->nxy == 0)
                 {
                     this->id_image = most_advanced_line / this->ny;
-                    this->flush_image(this->id_image);
+                    // this->flush_image(this->id_image);
                 }
             }
 

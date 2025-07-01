@@ -123,19 +123,33 @@ void LiveProcessor::set_file(std::string filename)
         camera = CAMERA::ADVAPIX;
         n_cam = 256;
     }
-    else if (std::filesystem::path(filename).extension() == ".t3r")
-    {
-        camera = CAMERA::ADVARAW;
-        n_cam = 256;
-    }
     else if (std::filesystem::path(filename).extension() == ".tpx3")
     {
         camera = CAMERA::CHEETAH;
         n_cam = 512;
     }
-    else if (std::filesystem::path(filename).extension() == ".electron") camera = CAMERA::SIMULATED;
-    else if (std::filesystem::path(filename).extension() == ".mib") camera = CAMERA::MERLIN;
-    else if (std::filesystem::path(filename).extension() == ".npy") camera = CAMERA::NUMPY;
+    else if (std::filesystem::path(filename).extension() == ".electron") camera = CAMERA::ELECTRON;
+    else if (std::filesystem::path(filename).extension() == ".mib")
+    {
+        camera = CAMERA::MERLIN;
+        std::array<int, 5> header_info = parse_mib_header(filename);
+        n_cam = header_info[2];
+        if (header_info[3] != n_cam) throw std::runtime_error("Non-square Merlin detector is not supported");
+        bitdepth = header_info[4];
+        std::cout << "Detector size: " << n_cam << ", Bit depth: " << bitdepth << std::endl;
+    }
+    else if (std::filesystem::path(filename).extension() == ".npy")
+    {
+        camera = CAMERA::NUMPY;
+        std::array<int, 5> header_info = parse_npy_header(filename);
+        nxy = header_info[0] * header_info[1];  
+        n_cam = header_info[2];
+        if (header_info[3] != n_cam) throw std::runtime_error("Only square detectors are currently supported");
+        if (n_cam != 256 && n_cam != 512 && n_cam != 128 && n_cam != 64) throw std::runtime_error("Only 64x64, 128x128, 256x256 and 512x512 detectors are currently supported for .npy files");
+        bitdepth = header_info[4];
+        if (bitdepth != 8 && bitdepth != 16) throw std::runtime_error("Only uint8 and uint16 are currently supported for .npy files");
+        std::cout << "Detector size: " << n_cam << ", Bit depth: " << bitdepth << std::endl;
+    }
     else if (std::filesystem::path(filename).extension() == ".hdf5") camera = CAMERA::HDF5;
     else camera = CAMERA::DUMMY;
 

@@ -36,11 +36,14 @@
 
 #include "SocketConnector.h"
 #include "FileConnector.h"
+#include "FileConnectorMmap.h"
 #include "Declusterer.hpp"
 #include "dtype_Electron.hpp"
 #include "Logger.hpp"
 #include "Roi4D.hpp"
 #include "AtomicWrapper.hpp"
+
+#define mmap_buffer_size 4194304 
 
 template <typename event, int buffer_size, int n_buffer>
 class TIMEPIX
@@ -108,8 +111,8 @@ protected:
 
     inline void atomic_vstem(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
-        // (*p_atomic_stem_data)[_probe_position]++;
-        // atomic_counter++;
+        (*p_atomic_stem_data)[_probe_position]++;
+        atomic_counter++;
     };
 
     inline void multi_vstem(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
@@ -131,16 +134,16 @@ protected:
 
     inline void com(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
-        (*p_dose_data)[_id_image%2][_probe_position]++;
-        (*p_sumy_data)[_id_image%2][_probe_position] += _ky;
-        (*p_sumx_data)[_id_image%2][_probe_position] += _kx;
+        (*p_dose_data)[_id_image][_probe_position]++;
+        (*p_sumy_data)[_id_image][_probe_position] += _ky;
+        (*p_sumx_data)[_id_image][_probe_position] += _kx;
     };
 
     inline void com_masked(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
-        (*p_dose_data)[_id_image%2][_probe_position] += com_mask[_kx*n_cam+_ky];
-        (*p_sumy_data)[_id_image%2][_probe_position] += _ky*com_mask[_kx*n_cam+_ky];
-        (*p_sumx_data)[_id_image%2][_probe_position] += _kx*com_mask[_kx*n_cam+_ky];
+        (*p_dose_data)[_id_image][_probe_position] += com_mask[_kx*n_cam+_ky];
+        (*p_sumy_data)[_id_image][_probe_position] += _ky*com_mask[_kx*n_cam+_ky];
+        (*p_sumx_data)[_id_image][_probe_position] += _kx*com_mask[_kx*n_cam+_ky];
     };
 
     #ifdef GPRI_OPTION_ENABLED
@@ -201,7 +204,11 @@ protected:
 
     inline void var(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
-        (*p_var_data)[_id_image][_probe_position] += (_kx-offset[0])*(_kx-offset[0])+(_ky-offset[0])*(_ky-offset[0]);
+        int _d2 = (_kx - offset[0])*(_kx - offset[0]) + (_ky - offset[1])*(_ky - offset[1]);
+        if (_d2 > inner_radius_sqr_var && _d2 <= outer_radius_sqr_var)
+        {
+            (*p_var_data)[_id_image][_probe_position] += (_kx-offset[0])*(_kx-offset[0])+(_ky-offset[1])*(_ky-offset[1]);
+        }
     };
 
     inline void roi(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
@@ -288,6 +295,7 @@ protected:
 protected:
     
     FileConnector file;
+    FileConnectorMmap mmap;
     std::thread read_thread;
     std::thread proc_thread;
     int n_buf = n_buffer;
@@ -304,18 +312,40 @@ protected:
     inline void read_file()
     {
         int buffer_id;
+        size_t size = sizeof(buffer[0]);
         while ((!this->repetitions_reached) && (*p_processor_line!=-1))
         {
             if (n_buffer_filled < (n_buffer + n_buffer_processed)) 
             {
                 buffer_id = n_buffer_filled % n_buffer; 
-                file.read_data((char *)&(buffer[buffer_id]), sizeof(buffer[buffer_id]));
+                file.read_data((char *)&(buffer[buffer_id]), size);
                 ++n_buffer_filled;
             }
             else
             {
                 read_wait++;
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+            }
+        }
+        file.close_file();
+    };
+
+    inline void read_mmap()
+    {
+        int buffer_id;
+        size_t map_size = mmap_buffer_size * sizeof(event) ; 
+        while ((!this->repetitions_reached) && (*p_processor_line!=-1))
+        {
+            if (n_buffer_filled < (n_buffer + n_buffer_processed)) 
+            {
+                buffer_id = n_buffer_filled % n_buffer; 
+                mmap.read_data(mmap_buffer[buffer_id], map_size);
+                ++n_buffer_filled;
+            }
+            else
+            {
+                read_wait++;
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
             }
         }
         file.close_file();
@@ -338,17 +368,6 @@ protected:
             }
         }
        
-    };
-
-    void flush_image(int id_img)
-    {
-        // //flushes intermidiate images like com data
-        // for (int i_image = 0; i_image < n_images; i_image++)
-        // {
-        //     std::fill(
-        //         (*(p_images[i_image]))[id_img].begin(),
-        //         (*(p_images[i_image]))[id_img].end(), 0);
-        // }
     };
 
     void reset()
@@ -404,7 +423,7 @@ public:
         ++n_proc;
     }
 
-    void enable_Ricom(std::vector<size_t> (*_p_dose_data)[2],std::vector<size_t> (*_p_sumx_data)[2],std::vector<size_t> (*_p_sumy_data)[2])
+    void enable_Ricom(std::vector<std::vector<size_t>> (*_p_dose_data),std::vector<std::vector<size_t>> (*_p_sumx_data),std::vector<std::vector<size_t>> (*_p_sumy_data))
     {
         p_dose_data = _p_dose_data;
         p_sumx_data = _p_sumx_data;
@@ -412,14 +431,10 @@ public:
 
         process.push_back(std::bind(&TIMEPIX::com, this,std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
         functionType = FunctionType::com;
-        p_images.push_back(p_sumx_data);
-        p_images.push_back(p_sumy_data);
-        p_images.push_back(p_dose_data);
         ++n_proc; 
-        n_images += 3;
     }
 
-    void enable_Ricom_masked(std::vector<int> *_p_com_mask,std::vector<size_t> (*_p_dose_data)[2],std::vector<size_t> (*_p_sumx_data)[2],std::vector<size_t> (*_p_sumy_data)[2])
+    void enable_Ricom_masked(std::vector<int> *_p_com_mask,std::vector<std::vector<size_t>> (*_p_dose_data),std::vector<std::vector<size_t>> (*_p_sumx_data),std::vector<std::vector<size_t>> (*_p_sumy_data))
     {
         p_dose_data = _p_dose_data;
         p_sumx_data = _p_sumx_data;
@@ -428,11 +443,7 @@ public:
         com_mask = *_p_com_mask;
         process.push_back(std::bind(&TIMEPIX::com_masked, this,std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
         functionType = FunctionType::com;
-        p_images.push_back(p_sumx_data);
-        p_images.push_back(p_sumy_data);
-        p_images.push_back(p_dose_data);
         ++n_proc; 
-        n_images += 3;
     }
 
 
@@ -493,15 +504,17 @@ public:
         ++n_proc;
     }
 
-    void enable_var(std::vector<size_t> (*_p_var_data)[2],std::array<float, 2> _offset)
+    void enable_var(std::vector<size_t> (*_p_var_data)[2],std::array<float, 2> _offset, int inner_radius, int outer_radius)
     {
         p_var_data = _p_var_data;
         offset = _offset;
+        inner_radius_sqr_var = inner_radius*inner_radius;
+        outer_radius_sqr_var = outer_radius*outer_radius;
         process.push_back(std::bind(&TIMEPIX::var, this,std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-        p_images.push_back(p_var_data);
+        // p_images.push_back(p_var_data);
         functionType = FunctionType::var;
         ++n_proc;
-        ++n_images;
+        // ++n_images;
     }
 
     void enable_roi(std::vector<std::vector<uint64_t>> *_p_roi_scan_image_stack,std::vector<std::vector<uint64_t>> *_p_roi_diffraction_pattern_stack,
@@ -621,7 +634,6 @@ public:
         if (decluster) std::cout << declusterer.n_electrons_kept << " electrons kept" << std::endl;
         std::cout << "reading waited " << read_wait << " times, processing waited " << process_wait << " times"<< std::endl;
         std::cout << "atomic counter: " << atomic_counter << std::endl;
-        // std::cout << "avg BM time: " << BM_duration_sum/BM_count << " us for " << BM_count << " calls" << std::endl;
     };
 
     float get_processing_rate(){
@@ -665,10 +677,13 @@ public:
     std::vector<std::array<float, 2>> offsets;
 
     // ricom 
-    std::vector<size_t> (*p_dose_data)[2];
-    std::vector<size_t> (*p_sumx_data)[2];
-    std::vector<size_t> (*p_sumy_data)[2];
-    std::vector<uint64_t> *p_counts_data;
+    // std::vector<size_t> (*p_dose_data)[2];
+    // std::vector<size_t> (*p_sumx_data)[2];
+    // std::vector<size_t> (*p_sumy_data)[2];
+    std::vector<std::vector<size_t>> *p_dose_data;
+    std::vector<std::vector<size_t>> *p_sumx_data;
+    std::vector<std::vector<size_t>> *p_sumy_data;
+    
     std::vector<int> com_mask;
 
     // GPRI
@@ -684,6 +699,7 @@ public:
 
 
     // FourD
+    std::vector<uint64_t> *p_counts_data;
     std::vector<uint8_t> (*p_fourDchunk_data_8)[2];
     std::vector<uint16_t> (*p_fourDchunk_data_16)[2];
     std::vector<uint32_t> (*p_fourDchunk_data_32)[2];
@@ -705,6 +721,8 @@ public:
     // Variance
     std::array<float, 2> offset;
     std::vector<size_t> (*p_var_data)[2];
+    int inner_radius_sqr_var;
+    int outer_radius_sqr_var;
 
     // ROI
     std::shared_ptr<Roi4DBase> p_roi_4D;
@@ -747,15 +765,16 @@ public:
     std::string file_path;
     SocketConnector socket;
 
-    //std::array<std::array<event, buffer_size>, n_buffer> buffer; // allocated on stack -> limited by 2gig stack frame 
-    std::array<event, buffer_size> *buffer = new std::array<event, buffer_size>[n_buffer]; // dynamic allocation on heap
+    // std::array<std::array<event, buffer_size>, n_buffer> buffer; // stack, should be faster but limited to aproxx 1MB buffer, either too small buff for efficient read or too little buff
+    std::array<event, buffer_size> *buffer = new std::array<event, buffer_size>[n_buffer]; // heap
+    std::array<void* ,n_buffer> mmap_buffer = std::array<void*, n_buffer>(); // mmap buffer
 
     std::vector<std::function<void(uint64_t, uint16_t, uint16_t, uint16_t)>> process; 
     TIMEPIX<event, buffer_size, n_buffer>::FunctionType functionType;
 
     int n_proc = 0;
-    std::vector<std::vector<size_t> (*)[2]> p_images; 
-    int n_images = 0;
+    // std::vector<std::vector<size_t> (*)[2]> p_images; 
+    // int n_images = 0;
 
     uint64_t starttime;
     uint64_t endtime;
@@ -795,7 +814,7 @@ public:
     {
         nxy = nx*ny;
         n_proc = 0;
-        n_images = 0;
+        // n_images = 0;
     }
 };
 #endif // TIMEPIX_H

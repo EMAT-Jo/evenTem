@@ -441,6 +441,34 @@ class Var(eventem.Var):
         """
         return np.array(super().Var_image).reshape(super().ny,super().nx)
     
+    @property
+    def InnerRadius(self):
+        """
+        int : inner radius of the annular detector
+        """
+        return super().inner_radius
+    
+    @InnerRadius.setter
+    def InnerRadius(self, value):
+        """
+        int : inner radius of the annular detector
+        """
+        self.inner_radius = value
+
+    @property
+    def OuterRadius(self):
+        """
+        int : outer radius of the annular detector
+        """
+        return super().outer_radius
+    
+    @OuterRadius.setter
+    def OuterRadius(self, value):
+        """
+        int : outer radius of the annular detector
+        """
+        self.outer_radius = value
+    
     def PlotImage(self):
         """
         Plot the reconstructed image
