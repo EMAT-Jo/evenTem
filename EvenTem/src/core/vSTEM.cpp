@@ -64,8 +64,8 @@ void vSTEM::run(){
                 file_path,
                 socket
             );
-
-            if (detector.n_detectors > 1)
+            if (use_mask) cam.enable_mask_vSTEM(&detector_mask,&vSTEM_stack);
+            else if (detector.n_detectors > 1)
             {
                 cam.enable_multi_vSTEM(&detector.radia_sqr,&offsets,&vSTEM_stack);
             }
@@ -150,6 +150,26 @@ void vSTEM::run(){
                     cam.terminate();
                     break;
                 }
+                else if (n_cam == 514){
+                    using namespace MERLIN_514_U8;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
                 else if (n_cam == 256){
                     using namespace MERLIN_256_U8;
                     MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
@@ -176,6 +196,26 @@ void vSTEM::run(){
             else if (bitdepth == 16){
                 if (n_cam == 512){ 
                     using namespace MERLIN_512_U16;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 514){
+                    using namespace MERLIN_514_U16;
                     MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                         nx, 
                         ny, 
@@ -264,6 +304,26 @@ void vSTEM::run(){
                 }
                 else if (n_cam == 128){ 
                     using namespace FRAME_128_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    compute_detector();
+                    cam.enable_vSTEM(&detector.detector_image,&vSTEM_stack, allow_torch);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                    break;
+                }
+                else if (n_cam == 192){ 
+                    using namespace FRAME_192_U8;
                     NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                         nx, 
                         ny, 

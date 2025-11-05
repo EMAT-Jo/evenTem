@@ -138,7 +138,6 @@ public:
     float processing_rate = 0;
 
     bool rc_quit = false;
-    // int max_stall_count = 2147483647; 
     int max_stall_count = 1000000000; 
 
     // benchmarking

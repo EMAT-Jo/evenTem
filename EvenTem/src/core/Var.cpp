@@ -152,11 +152,10 @@ void Var::line_processor(
             Var_image[idxx_p_i] = (float)Var_data[id_image][idxx_p_i];
             }
         // end of line handler
-        int update_line = idxx / nx; //- kernel.kernel_size*2;
+        int update_line = idxx / nx;
         if ((prog_mon->report_set) && (update_line)>0)
         {
             fr_freq = prog_mon->fr_freq;
-            //rescales_recomputes();
             prog_mon->reset_flags();
         }
         }

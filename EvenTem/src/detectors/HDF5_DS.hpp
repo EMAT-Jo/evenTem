@@ -122,7 +122,7 @@ public:
         {
             case 0:
             {
-                // this->data_depth = pre_run();
+                this->data_depth = pre_run();
                 this->read_thread = std::thread(&HDF5::buffer_reading, this);
                 break;
             }
@@ -144,6 +144,7 @@ public:
     H5::DataSpace dataspace;
     hsize_t dims[4];
     int frame_index = 0;
+    int data_depth;
 
     HDF5(
         int &nx,

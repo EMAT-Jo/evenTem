@@ -73,6 +73,7 @@ private:
         int clustersize = 1;
         int _bs = buffer[_buffer_id]->size();
         std::vector<bool> used(_bs, false);
+        std::vector<int> energy_buffer(_bs, 0);
         std::shared_ptr<std::vector<int>> lcl_keep = std::make_shared<std::vector<int>>();
 
         for (int i = 0; i < _bs; ++i) 
@@ -99,12 +100,14 @@ private:
                         {
                             used[j] = true;
                             clustersize++;
+                            energy_buffer[i] += (*buffer[_buffer_id])[j].tot;
                         }
                     }
                 }
                 if (clustersize < max_clustersize) (*p_clustersize_histogram)[clustersize]++;
                 clustersize = 1;
                 lcl_keep->push_back(i);
+                energy_buffer[i] += (*buffer[_buffer_id])[i].tot;
             }
             used[i] = true;
         }
@@ -112,6 +115,14 @@ private:
         n_electrons_kept += lcl_keep->size();
         ++this->n_buffer_declustered;
         keep[_buffer_id] = lcl_keep;
+
+        for (int i = 0; i < _bs; ++i)
+        {
+            if (energy_buffer[i] < p_energy_histogram->size())
+            {
+                (*p_energy_histogram)[energy_buffer[i]]++;
+            }
+        }
     };
 
     
@@ -188,9 +199,10 @@ public:
     int n_buffer_written = 0;
     std::atomic<int> n_electrons_kept = 0;
     std::vector<int> *p_clustersize_histogram;
+    std::vector<int> *p_energy_histogram;
     int max_clustersize = 0;
 
-    void init(uint64_t dtime, uint16_t dspace, int cluster_range,int x_crop,int y_crop,int scan_bin, int det_bin, std::ofstream& _p_file, int n_threads, std::vector<int> *_p_clustersize_histogram)
+    void init(uint64_t dtime, uint16_t dspace, int cluster_range,int x_crop,int y_crop,int scan_bin, int det_bin, std::ofstream& _p_file, int n_threads, std::vector<int> *_p_clustersize_histogram, std::vector<int> *_p_energy_histogram)
     {
         this->dtime = dtime;
         this->dspace = dspace;
@@ -201,6 +213,7 @@ public:
         this->x_crop = x_crop;
         this->y_crop = y_crop;
         this->p_clustersize_histogram = _p_clustersize_histogram;
+        this->p_energy_histogram = _p_energy_histogram;
         max_clustersize = p_clustersize_histogram->size();
 
         std::cout << "Declustering param: dtime = " << dtime << ", dspace = " << dspace << ", cluster_range = " << cluster_range << std::endl;

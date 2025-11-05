@@ -37,8 +37,8 @@
 
 namespace CHEETAH_ADDITIONAL
 {
-    const size_t BUFFER_SIZE = 1048576;
-    const size_t N_BUFFER = 1024;
+    const size_t BUFFER_SIZE = 65536;
+    const size_t N_BUFFER = 512;
     using EVENT = uint64_t;
 }; 
 
@@ -232,11 +232,11 @@ private:
 
     void check_toa_overflow()
     {
-        if ((prev_toa > toa + toa_overflow_drop) && (this->current_line > 1) && (last_offset_line != this->current_line)) // toa drop bigger than half of toa range --> toa must have overflowed
+        if ((prev_toa > toa + toa_overflow_drop) && (this->current_line > 1) && (this->current_line > last_offset_line + 1)) // toa drop bigger than half of toa range --> toa must have overflowed
         {
             toa_offset += 17179869184; 
             last_offset_line = this->current_line;
-            std::cout << "toa overflow at line " << this->current_line << std::endl;
+            // std::cout << "toa overflow (image " << this->current_line/this->ny << ", line " << this->current_line%this->ny << ")" << std::endl;
         }
         prev_toa = toa;
     };
@@ -245,7 +245,7 @@ private:
         while ((*this->p_processor_line)!=-1)
         {
             check_toa_overflow();
-            std::this_thread::sleep_for(std::chrono::microseconds(1));
+            std::this_thread::sleep_for(std::chrono::nanoseconds(100));
         }
     }
 
@@ -262,7 +262,7 @@ private:
                 if (!this->repetitions_reached)
                 { 
                     process_buffer(&(this->buffer[buffer_id]));
-                    state_after_buffer_list.push_back({tdc_offset, toa_offset, line_count[0], line_count[1], line_count[2], line_count[3]});
+                    // state_after_buffer_list.push_back({tdc_offset, toa_offset, line_count[0], line_count[1], line_count[2], line_count[3]});
 
                     if (this->decluster) this->declusterer.set_buffer_read();
 
@@ -274,7 +274,7 @@ private:
             else
             {
                 this->process_wait++;
-                std::this_thread::sleep_for(std::chrono::microseconds(10));
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
         }
     };
@@ -312,20 +312,22 @@ private:
 
     inline int which_type(event *packet)
     {
-        if ((*packet & 0xFFFFFFFF) == tpx_header) // header
+        if (*packet >> 60 == 0xb) // event
+        {
+            return 2;
+        }
+        else if ((*packet & 0xFFFFFFFF) == tpx_header) // header
         {
             chip_id = (*packet >> 32) & 0xff;
+            check_toa_overflow();
             return 0;
         } 
         else if (*packet >> 60 == 0x6) // TDC
         {
+            check_toa_overflow();
             process_tdc(packet);
             return 1;
         } 
-        else if (*packet >> 60 == 0xb) // event
-        {
-            return 2;
-        }
         else if (*packet >> 60 == 0x4)
         {
             std::cout << "global time" << std::endl;
@@ -345,11 +347,11 @@ private:
             rise_fall[chip_id] = true;
             rise_t[chip_id] = ((*packet >> 9) & 0x7FFFFFFFF) + tdc_offset;
 
-            if ((prev_tdc > rise_t[chip_id] + tdc_overflow_drop) && (this->current_line > 1) && (last_offset_line_tdc != this->current_line)) // tdc drop bigger than half of tdc range --> tdc must have overflowed
+            if ((prev_tdc > rise_t[chip_id] + tdc_overflow_drop) && (this->current_line > 1) && (this->current_line > last_offset_line_tdc + 1)) // tdc drop bigger than half of tdc range --> tdc must have overflowed
             {
             tdc_offset += 34359738368; 
             last_offset_line_tdc = this->current_line;
-            std::cout << "tdc overflow at line " << this->current_line << std::endl;
+            // std::cout << "tdc overflow (image " << this->current_line/this->ny << ", line " << this->current_line%this->ny << ")" << std::endl;
             }
 
             prev_tdc = rise_t[chip_id];
@@ -359,10 +361,11 @@ private:
             rise_fall[chip_id] = false;
             fall_t[chip_id] = ((*packet >> 9) & 0x7FFFFFFFF) + tdc_offset;
 
-            if ((prev_tdc > fall_t[chip_id] + tdc_overflow_drop) && (this->current_line > 1) && (last_offset_line_tdc != this->current_line)) // tdc drop bigger than half of tdc range --> tdc must have overflowed
+            if ((prev_tdc > fall_t[chip_id] + tdc_overflow_drop) && (this->current_line > 1) && (this->current_line > last_offset_line_tdc + 1)) // tdc drop bigger than half of tdc range --> tdc must have overflowed
             {
             tdc_offset += 34359738368; 
             last_offset_line_tdc = this->current_line;
+            // std::cout << "tdc overflow (image " << this->current_line/this->ny << ", line " << this->current_line%this->ny << ")" << std::endl;
             }
 
             prev_tdc = fall_t[chip_id];
@@ -379,14 +382,12 @@ private:
                 if (most_advanced_line%this->ny == 0)
                 {
                     this->id_image = most_advanced_line / this->ny ;
-                    // this->flush_image(this->id_image);
                 }
             }
 
             line_interval = (fall_t[chip_id] - rise_t[chip_id]) * 2; //factor 2 for difference in time unit of tdc and toa
-            // std::cout << "line interval: " << line_interval << std::endl;
             dt = line_interval / this->nx; //unit 1.5625 ns
-            // std::cout << dt << std::endl;
+            // std::cout << dt*1.5625 << std::endl;
         }
         if (this->current_line == this->ny * this->repetitions) this->repetitions_reached = true;
     };

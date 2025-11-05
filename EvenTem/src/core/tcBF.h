@@ -12,39 +12,26 @@
  *   Arno Annys <arno.annys@uantwerpen.be>
  */
 
-#ifndef ELECTRON_H
-#define ELECTRON_H
-
+#ifndef TCBF_H
+#define TCBF_H
 
 #include "LiveProcessor.h"
 
-#include "dtype_Electron.hpp"
-
-class Electron : public LiveProcessor
+class tcBF : public LiveProcessor
 {
 private: 
-   
+
 public: 
-    std::ofstream file_electron;
+    std::vector<size_t> BF_image;
+    std::vector<std::vector<size_t>> tcBF_stack;
 
-    bool decluster = true;
-    uint64_t dtime = 100;
-    uint16_t dspace = 6;
-    int cluster_range = 256;
-    int n_threads = 1;
-    std::vector<int> clustersize_histogram = std::vector<int>(50,0);
-    std::vector<int> energy_histogram = std::vector<int>(1000,0);
-
-    int x_crop = 0;
-    int y_crop = 0;
-    int scan_bin = 1;
-    int detector_bin = 1;
+    bool allow_torch = false;
+    bool allow_cuda = false;
 
     void run();
     void reset();
-    void openDatFile();
-    void closeDatFile();
-    void close();
+
+    int N_angles;
 
     void line_processor(
         size_t &img_num,
@@ -55,14 +42,15 @@ public:
         BoundedThreadPool *pool
     );
 
+    void set_detector_mask(py::array_t<int> mask);
+    std::vector<int> detector_mask;
+
     // Constructor
-    Electron(int repetitions) : LiveProcessor(repetitions)
+    tcBF(int repetitions) : LiveProcessor(repetitions)
     {
     };
 
     // Destructor
-    ~Electron()
-    {
-    };
+    ~tcBF(){};
 };
-#endif // !ELECTRON_H
+#endif // !tcBF_H

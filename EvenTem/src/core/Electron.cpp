@@ -66,7 +66,7 @@ void Electron::run(){
                 file_path,
                 socket
             );
-            cam.enable_electron(file_electron,decluster,dtime,dspace,cluster_range, x_crop, y_crop, scan_bin, detector_bin, n_threads, &clustersize_histogram);
+            cam.enable_electron(file_electron,decluster,dtime,dspace,cluster_range, x_crop, y_crop, scan_bin, detector_bin, n_threads, &clustersize_histogram,&energy_histogram);
             cam.run();
             process_data();
             cam.terminate();
@@ -88,7 +88,7 @@ void Electron::run(){
                 file_path,
                 socket
             );
-            cam.enable_electron(file_electron,decluster,dtime,dspace,cluster_range, x_crop, y_crop, scan_bin, detector_bin, n_threads, &clustersize_histogram);
+            cam.enable_electron(file_electron,decluster,dtime,dspace,cluster_range, x_crop, y_crop, scan_bin, detector_bin, n_threads, &clustersize_histogram,&energy_histogram);
             cam.run();
             process_data();
             cam.terminate();

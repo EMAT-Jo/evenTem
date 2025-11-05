@@ -70,7 +70,8 @@ protected:
             write_electron,
             write_declusterer_buffer,
             information,
-            atomic_vstem
+            atomic_vstem,
+            tcBF
         };
     #else
         enum class FunctionType 
@@ -91,7 +92,8 @@ protected:
             write_electron,
             write_declusterer_buffer,
             information,
-            atomic_vstem
+            atomic_vstem,
+            tcBF
         };
     #endif
 
@@ -129,7 +131,7 @@ protected:
 
     inline void mask_vstem(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
-            (*p_stem_data)[_id_image][_probe_position] += detector_mask[_kx*n_cam+_ky];
+            (*p_stem_data)[_id_image][_probe_position] += detector_mask[_ky*n_cam+_kx];
     };
 
     inline void com(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
@@ -141,22 +143,29 @@ protected:
 
     inline void com_masked(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
-        (*p_dose_data)[_id_image][_probe_position] += com_mask[_kx*n_cam+_ky];
-        (*p_sumy_data)[_id_image][_probe_position] += _ky*com_mask[_kx*n_cam+_ky];
-        (*p_sumx_data)[_id_image][_probe_position] += _kx*com_mask[_kx*n_cam+_ky];
+        (*p_dose_data)[_id_image][_probe_position] += com_mask[_ky*n_cam+_kx];
+        (*p_sumy_data)[_id_image][_probe_position] += _ky*com_mask[_ky*n_cam+_kx];
+        (*p_sumx_data)[_id_image][_probe_position] += _kx*com_mask[_ky*n_cam+_kx];
+    };
+
+    inline void tcBF(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
+    {
+        int m = (*p_tcbf_detector_mask)[_ky*n_cam+_kx];
+        if (m != -1)
+        {
+            (*p_tcbf_BF_image)[_probe_position]++;
+            (*p_tcBF_stack)[m][_probe_position]++;
+        }
     };
 
     #ifdef GPRI_OPTION_ENABLED
     inline void GPRI(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
-        // uint64_t _x_pp = (_probe_position%nx)/GPRI_scan_bin;
-        // uint64_t _y_pp = (_probe_position/nx)/GPRI_scan_bin;
-        // _probe_position = (_y_pp*(nx/GPRI_scan_bin) + _x_pp);
-
-        (*p_k_indices_vec)[_probe_position+_id_image*GPRI_nxy_scan_bin]->push_back((_kx/GPRI_detector_bin)*GPRI_cam_bin+(_ky/GPRI_detector_bin));
-        (*p_N_electrons_map_scangrid)[_id_image][_probe_position] += 1;
     };
     #endif
+
+
+    // STILL WANT TO FLIP THESE! KY KX
 
     inline void count_chunked_8(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
@@ -197,9 +206,11 @@ protected:
         (*p_fourDchunk_data_32)[_id_chunk][((_bin_probe_position)%(chunksize_scan_bin*nx_scan_bin))*diff_pattern_size + (_kx/fourD_det_bin*n_cam/fourD_det_bin+_ky/fourD_det_bin)]++;
     };
 
+    // STILL WANT TO FLIP ABOVE!
+
     inline void pacbed(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
-        (*p_pacbed_data)[_kx*n_cam+_ky]++;
+        (*p_pacbed_data)[_ky*n_cam+_kx]++;
     };
 
     inline void var(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
@@ -218,9 +229,9 @@ protected:
 
         if (_x >= lower_left[0] && _x < upper_right[0] && _y > lower_left[1] && _y <= upper_right[1])
         {
-            (*p_roi_diffraction_pattern_stack)[_id_image][_kx*n_cam+_ky]++;
+            (*p_roi_diffraction_pattern_stack)[_id_image][_ky*n_cam+_kx]++;
             (*p_roi_scan_image_stack)[_id_image][(L_1 - (_y-lower_left[1])) * L_0 + (_x-lower_left[0])]++;
-            (*p_roi_diffraction_pattern)[_kx*n_cam+_ky]++;
+            (*p_roi_diffraction_pattern)[_ky*n_cam+_kx]++;
             (*p_roi_scan_image)[(L_1 - (_y-lower_left[1])) * L_0 + (_x-lower_left[0])]++;
         } 
     };
@@ -232,9 +243,9 @@ protected:
 
         if (_x >= lower_left[0] && _x < upper_right[0] && _y > lower_left[1] && _y <= upper_right[1])
         {
-            (*p_roi_diffraction_pattern_stack)[_id_image][_kx*n_cam+_ky] += this->tot;
+            (*p_roi_diffraction_pattern_stack)[_id_image][_ky*n_cam+_kx] += this->tot;
             (*p_roi_scan_image_stack)[_id_image][(L_1 - (_y-lower_left[1])) * L_0 + (_x-lower_left[0])]++;
-            (*p_roi_diffraction_pattern)[_kx*n_cam+_ky] += this->tot;
+            (*p_roi_diffraction_pattern)[_ky*n_cam+_kx] += this->tot;
             (*p_roi_scan_image)[(L_1 - (_y-lower_left[1])) * L_0 + (_x-lower_left[0])]++;
         } 
     };
@@ -243,9 +254,9 @@ protected:
     {
         if (mask_roi[_id_image][_probe_position] == 1)
         {
-            (*p_roi_diffraction_pattern_stack)[_id_image][_kx*n_cam+_ky]++;
+            (*p_roi_diffraction_pattern_stack)[_id_image][_ky*n_cam+_kx]++;
             (*p_roi_scan_image_stack)[_id_image][_probe_position]++;
-            (*p_roi_diffraction_pattern)[_kx*n_cam+_ky] += 1;
+            (*p_roi_diffraction_pattern)[_ky*n_cam+_kx] += 1;
             (*p_roi_scan_image)[_probe_position]++;
         } 
     };
@@ -257,9 +268,9 @@ protected:
 
         if (_x >= lower_left[0] && _x < upper_right[0] && _y > lower_left[1] && _y <= upper_right[1] )
         {
-            (*p_roi_diffraction_pattern)[_kx*n_cam+_ky]++;
+            (*p_roi_diffraction_pattern)[_ky*n_cam+_kx]++;
             (*p_roi_scan_image)[(L_1 - (_y-lower_left[1])) * L_0 + (_x-lower_left[0])]++;
-            p_roi_4D->increment(L_1 - (_y-lower_left[1]), _x-lower_left[0], _kx/det_bin, _ky/det_bin);
+            p_roi_4D->increment(L_1 - (_y-lower_left[1]), _x-lower_left[0], _ky/det_bin, _kx/det_bin);
         } 
     };
 
@@ -288,7 +299,7 @@ protected:
 
     inline void information(uint64_t _probe_position, uint16_t _kx, uint16_t _ky, uint16_t _id_image)
     {
-        (*p_information_image)[_probe_position] += -log2((*p_probability_distribution)[_kx*n_cam+_ky]);
+        (*p_information_image)[_probe_position] += -log2((*p_probability_distribution)[_ky*n_cam+_kx]);
         (*p_count_image)[_probe_position]++;
     };
 
@@ -517,6 +528,16 @@ public:
         // ++n_images;
     }
 
+    void enable_tcBF(std::vector<int> *_p_detector_mask,std::vector<size_t> *_p_BF_image, std::vector<std::vector<size_t>> *_p_tcBF_stack)
+    {
+        p_tcbf_detector_mask = _p_detector_mask;
+        p_tcbf_BF_image = _p_BF_image;
+        p_tcBF_stack = _p_tcBF_stack;
+        functionType = FunctionType::tcBF;
+        ++n_proc;
+
+    }
+
     void enable_roi(std::vector<std::vector<uint64_t>> *_p_roi_scan_image_stack,std::vector<std::vector<uint64_t>> *_p_roi_diffraction_pattern_stack,
     std::vector<uint64_t> *_p_roi_scan_image,std::vector<uint64_t> *_p_roi_diffraction_pattern,int _lower_left[2] , int _upper_right[2])
     {
@@ -571,10 +592,10 @@ public:
     }
 
     void enable_electron(std::ofstream& _p_file, bool _decluster, uint64_t _dtime, uint16_t _dspace, int _cluster_range, int _x_crop, int _y_crop,
-    int _scan_bin_electron, int _det_bin_electron, int _n_threads, std::vector<int> *_p_clustersize_histogram)
+    int _scan_bin_electron, int _det_bin_electron, int _n_threads, std::vector<int> *_p_clustersize_histogram,std::vector<int> *_p_energy_histogram)
     {
         decluster = _decluster;
-        if (decluster) declusterer.init(_dtime, _dspace, _cluster_range,_x_crop,_y_crop,_scan_bin_electron,_det_bin_electron,_p_file,_n_threads,_p_clustersize_histogram);
+        if (decluster) declusterer.init(_dtime, _dspace, _cluster_range,_x_crop,_y_crop,_scan_bin_electron,_det_bin_electron,_p_file,_n_threads,_p_clustersize_histogram,_p_energy_histogram);
         p_file = &_p_file;
         x_crop = _x_crop;
         y_crop = _y_crop;
@@ -584,6 +605,7 @@ public:
         else functionType = FunctionType::write_electron;
         if (decluster) decluster_thread = std::thread(&Declusterer::run, &declusterer);
         ++n_proc;        
+        this->b_tot = true;
     } 
 
     #ifdef GPRI_OPTION_ENABLED
@@ -634,6 +656,7 @@ public:
         if (decluster) std::cout << declusterer.n_electrons_kept << " electrons kept" << std::endl;
         std::cout << "reading waited " << read_wait << " times, processing waited " << process_wait << " times"<< std::endl;
         std::cout << "atomic counter: " << atomic_counter << std::endl;
+        delete [] buffer;
     };
 
     float get_processing_rate(){
@@ -683,8 +706,13 @@ public:
     std::vector<std::vector<size_t>> *p_dose_data;
     std::vector<std::vector<size_t>> *p_sumx_data;
     std::vector<std::vector<size_t>> *p_sumy_data;
-    
     std::vector<int> com_mask;
+
+    // tcBF
+    std::vector<int> *p_tcbf_detector_mask;
+    std::vector<size_t> *p_tcbf_BF_image;
+    std::vector<std::vector<size_t>> *p_tcBF_stack;
+
 
     // GPRI
     #ifdef GPRI_OPTION_ENABLED

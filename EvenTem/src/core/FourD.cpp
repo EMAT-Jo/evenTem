@@ -140,28 +140,8 @@ void FourD<BitDepth>::run(){
 template<int BitDepth>
 void FourD<BitDepth>::allocate_chunk()
 {
-    switch (camera)
-     {
-        case CAMERA::ADVAPIX:
-        {   
-            diff_pattern_size = 256/det_bin*256/det_bin;
-            diff_pattern_length = 256/det_bin;
-            break;
-        }
-        case CAMERA::CHEETAH:
-        {
-            diff_pattern_size = 512/det_bin*512/det_bin;
-            diff_pattern_length = 512/det_bin;
-            break;
-        }
-        case CAMERA::MERLIN:
-        {
-            diff_pattern_size = n_cam/det_bin*n_cam/det_bin;
-            diff_pattern_length = n_cam/det_bin;
-            break;
-        }
-    }
-    std:: cout << chunksize/scan_bin << " " << nx/scan_bin << " " << diff_pattern_size << std::endl;
+    diff_pattern_size = n_cam/det_bin*n_cam/det_bin;
+    diff_pattern_length = n_cam/det_bin;
     double bits = chunksize/scan_bin*nx/scan_bin*diff_pattern_size*bitdepth;
     std::cout << "Chunk size: " << bits/8000000. << "MB" << std::endl;
 

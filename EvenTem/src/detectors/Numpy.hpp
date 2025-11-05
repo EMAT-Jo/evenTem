@@ -36,8 +36,11 @@
 
 #include "SocketConnector.h"
 #include "FileConnector.h"
+#include "FileConnectorMmap.h"
 #include "BoundedThreadPool.hpp"
 #include "FrameBased.hpp"
+
+#define mmap_buffer_size 512*512*256
 
 template <int n_cam,int buffer_size, int HEAD_SIZE, int n_buffer, typename pixel>
 class NUMPY : public FRAMEBASED<n_cam,buffer_size,HEAD_SIZE,n_buffer,pixel>
@@ -104,14 +107,14 @@ protected:
     // }
     void parse_npy_header()
     {
-        // Read magic string
+        //magic string
         char magic[6];
         this->file.read_data(magic, 6);
         if (std::memcmp(magic, "\x93NUMPY", 6) != 0) {
             throw std::runtime_error("Not a valid .npy file");
         }
 
-        // Read version number
+        //version number
         uint8_t major_version, minor_version;
         this->file.read_data(reinterpret_cast<char*>(&major_version), 1);
         this->file.read_data(reinterpret_cast<char*>(&minor_version), 1);
@@ -141,12 +144,15 @@ protected:
                 _frame_id = this->n_frame_filled % buffer_size; 
                 _buffer_id = (this->n_frame_filled/buffer_size)%n_buffer;
                 read_frame(this->frame_buffer[_buffer_id][_frame_id]);
+                // read_frame_mmap(mmap_buffer[_buffer_id]);
 
-                ++this->n_frame_filled;
+                this->n_frame_filled+=buffer_size;
 
                 if ((this->n_frame_filled%buffer_size == 0) && (this->n_buffer_filled < (n_buffer + this->n_buffer_processed))) 
                 {
-                    // if (this->GPRI_enabled || this->frame_torch_enabled) this->Binned_Tensor_buffer[_buffer_id] = ((torch::from_blob(this->frame_buffer[_buffer_id], {buffer_size,n_cam, n_cam}, torch::TensorOptions().dtype(torch::kUInt8)).to(this->device)).view({buffer_size,n_cam/this->GPRI_detector_bin, this->GPRI_detector_bin, n_cam/this->GPRI_detector_bin, this->GPRI_detector_bin}).sum({2, 4}, /*keepdim=*/false)).to(this->Tensortype);
+                    #ifdef GPRI_OPTION_ENABLED 
+                        if (this->GPRI_enabled || this->frame_torch_enabled) this->Binned_Tensor_buffer[_buffer_id] = ((torch::from_blob(this->frame_buffer[_buffer_id], {buffer_size,n_cam, n_cam}, torch::TensorOptions().dtype(torch::kUInt8)).to(this->device)).view({buffer_size,n_cam/this->GPRI_detector_bin, this->GPRI_detector_bin, n_cam/this->GPRI_detector_bin, this->GPRI_detector_bin}).sum({2, 4}, /*keepdim=*/false)).to(this->Tensortype);
+                    #endif
                     ++this->n_buffer_filled;
                 }
             }
@@ -168,9 +174,16 @@ protected:
 
     inline void read_frame(std::array<pixel,n_cam*n_cam> &data)
     {
-        int data_size = static_cast<int>(this->framesize * sizeof(pixel));
+        int data_size = static_cast<int>(n_cam*n_cam*sizeof(pixel)*buffer_size);
         char *buffer = reinterpret_cast<char *>(&data[0]);
         read_data_file(buffer, data_size);
+
+    };
+
+    inline void read_frame_mmap(void* buffer)
+    {
+        size_t data_size = static_cast<int>(n_cam*n_cam*sizeof(pixel)*buffer_size);
+        mmap.read_data(buffer, data_size);
     };
 
 
@@ -188,6 +201,11 @@ public:
                 this->file.open_file();
                 this->parse_npy_header();
                 this->read_thread = std::thread(&NUMPY::buffer_reading, this);
+
+                // mmap.path = this->file_path;
+                // mmap.open_file();
+                // this->read_thread = std::thread(&NUMPY::buffer_reading, this);
+
                 break;
             }
             case 1:
@@ -205,7 +223,9 @@ public:
 
     std::vector<int> shape;
     size_t data_offset;
-    uint64_t framesize;
+
+    FileConnectorMmap mmap;
+    std::array<void*,n_buffer> mmap_buffer = std::array<void*, n_buffer>(); // mmap buffer
 
     NUMPY(
         int &nx,
@@ -228,7 +248,6 @@ public:
         file_path, 
         socket)
     {
-        this->framesize = n_cam * n_cam;
     }
 
 };

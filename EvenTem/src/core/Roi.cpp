@@ -184,6 +184,31 @@ void Roi::run(){
                     process_data();
                     cam.terminate();
                 }
+                else if (n_cam == 514){
+                    using namespace MERLIN_514_U8;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
                 else if (n_cam == 256){
                     using namespace MERLIN_256_U8;
                     MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
@@ -214,6 +239,31 @@ void Roi::run(){
             else if (bitdepth == 16){
                 if (n_cam == 512){
                     using namespace MERLIN_512_U16;
+                    MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 514){
+                    using namespace MERLIN_514_U16;
                     MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                         nx, 
                         ny, 
@@ -326,6 +376,32 @@ void Roi::run(){
                 else if (n_cam == 128)
                 {
                     using namespace FRAME_128_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                        nx, 
+                        ny, 
+                        &b_cumulative,
+                        rep,
+                        processor_line,
+                        preprocessor_line,
+                        mode,
+                        file_path,
+                        socket
+                    );
+                    if (b_ROI_4D)
+                    {
+                        // cam.enable_roi_4D(&Roi_4D,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right,det_bin);
+                    }
+                    else
+                    {
+                        cam.enable_roi(&Roi_scan_image_stack,&Roi_diffraction_pattern_stack,&Roi_scan_image,&Roi_diffraction_pattern, lower_left, upper_right);
+                    }
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 192)
+                {
+                    using namespace FRAME_192_U8;
                     NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                         nx, 
                         ny, 
@@ -600,9 +676,8 @@ void Roi::line_processor(
         idxx = (int)(prog_mon->fr_count) % nxy;
         *prog_mon += nx;
 
-
         // end of line handler
-        int update_line = idxx / nx; //- kernel.kernel_size*2;
+        int update_line = idxx / nx;
         if ((prog_mon->report_set) && (update_line)>0)
         {
             fr_freq = prog_mon->fr_freq;
@@ -613,7 +688,6 @@ void Roi::line_processor(
             rc_quit = true;
         }
         
-
         // end of image handler
         if (prog_mon->fr_count >= end_frame)
         {

@@ -43,33 +43,14 @@ void LiveProcessor::process_data()
             fr_total_u, 
             &pool
         );
-
-        //check for stalling
-        // if (last_processor_line == *processor_line)
-        // {
-        //     stall_count++;
-
-        //     if (stall_count > max_stall_count)
-        //     {
-        //         std::cerr << " \n The processor seems to have stalled, this usually means that the data does not reach the expected number of probe positions. Check the number of probe positions and dwell time. \n" << std::endl;
-        //         rc_quit = true;
-        //     }
-        // }
-        // else
-        // {
-        //     stall_count = 0;
-        //     last_processor_line = *processor_line;
-        // }
     }
     p_prog_mon = nullptr;
 }
-
 
 void LiveProcessor::accept_socket()
 {
     socket.accept_socket();
 }
-
 
 void LiveProcessor::set_socket(std::string ip, int port,std::string camera_name)
 {
@@ -81,7 +62,6 @@ void LiveProcessor::set_socket(std::string ip, int port,std::string camera_name)
         camera = CAMERA::ADVAPIX;
         return;
     }
-
     else if (camera_name == "CHEETAH") 
     {
         socket.socket_type = Socket_type::SERVER;
@@ -145,12 +125,17 @@ void LiveProcessor::set_file(std::string filename)
         nxy = header_info[0] * header_info[1];  
         n_cam = header_info[2];
         if (header_info[3] != n_cam) throw std::runtime_error("Only square detectors are currently supported");
-        if (n_cam != 256 && n_cam != 512 && n_cam != 128 && n_cam != 64) throw std::runtime_error("Only 64x64, 128x128, 256x256 and 512x512 detectors are currently supported for .npy files");
+        if (n_cam != 256 && n_cam != 512 && n_cam != 514 && n_cam != 128 && n_cam != 64 && n_cam != 192) throw std::runtime_error("Only 64x64, 128x128, 192x192 256x256 and 512x512 detectors are currently supported for .npy files");
         bitdepth = header_info[4];
         if (bitdepth != 8 && bitdepth != 16) throw std::runtime_error("Only uint8 and uint16 are currently supported for .npy files");
         std::cout << "Detector size: " << n_cam << ", Bit depth: " << bitdepth << std::endl;
     }
-    else if (std::filesystem::path(filename).extension() == ".hdf5") camera = CAMERA::HDF5;
+    else if (std::filesystem::path(filename).extension() == ".hdf5") {
+        camera = CAMERA::HDF5;
+        n_cam = 64;
+        bitdepth = 8;
+    }
+
     else camera = CAMERA::DUMMY;
 
     if ((std::filesystem::path(filename).extension() == ".mib") || (std::filesystem::path(filename).extension() == ".npy") || (std::filesystem::path(filename).extension() == ".hdf5")) event_mode = false;

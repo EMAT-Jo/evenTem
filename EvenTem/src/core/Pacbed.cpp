@@ -127,6 +127,25 @@ void Pacbed::run(){
                 process_data();
                 cam.terminate();
             }
+            else if (n_cam == 514)
+            {
+                using namespace MERLIN_514_U8;
+                MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                );
+                cam.enable_Pacbed(&Pacbed_image);
+                cam.run();
+                process_data();
+                cam.terminate();
+            }
             else if (n_cam == 256)
             {
                 using namespace MERLIN_256_U8;
@@ -153,6 +172,25 @@ void Pacbed::run(){
             if (n_cam == 512) 
             {
                 using namespace MERLIN_512_U16;
+                MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                );
+                cam.enable_Pacbed(&Pacbed_image);
+                cam.run();
+                process_data();
+                cam.terminate();
+            }
+            else if (n_cam == 514) 
+            {
+                using namespace MERLIN_514_U16;
                 MERLIN<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                     nx, 
                     ny, 
@@ -216,6 +254,24 @@ void Pacbed::run(){
             }
             else if (n_cam == 128) {
                 using namespace FRAME_128_U8;
+                NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                );
+                cam.enable_Pacbed(&Pacbed_image);
+                cam.run();
+                process_data();
+                cam.terminate();
+            }
+            else if (n_cam == 192) {
+                using namespace FRAME_192_U8;
                 NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                     nx, 
                     ny, 
@@ -353,8 +409,6 @@ void Pacbed::run(){
     rc_quit = true;
 }
 
-
-
 void Pacbed::reset()
 {
     rc_quit = false;
@@ -373,7 +427,6 @@ void Pacbed::reset()
     *preprocessor_line = 0;
 
 }
-
 
 
 void Pacbed::line_processor(

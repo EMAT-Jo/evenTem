@@ -47,6 +47,8 @@ set(SOURCES
     ../EvenTem/src/core/Ricom.h
     ../EvenTem/src/core/vSTEM.h
     ../EvenTem/src/core/vSTEM.cpp
+    ../EvenTem/src/core/tcBF.h
+    ../EvenTem/src/core/tcBF.cpp
     ../EvenTem/src/core/Pacbed.h
     ../EvenTem/src/core/Pacbed.cpp
     ../EvenTem/src/core/Var.h
@@ -66,23 +68,30 @@ set(SOURCES
     ../EvenTem/src/detectors/ElectronFile.hpp
     ../EvenTem/src/detectors/Merlin.hpp
     ../EvenTem/src/detectors/HDF5_DS.hpp
+    ../EvenTem/src/detectors/FrameBased.hpp
+    ../EvenTem/src/detectors/Numpy.hpp
     ../EvenTem/src/pybind.cpp
 )
 
 #----------------------------------------------------------------------------------------------------------------
 if (WIN32)
+    add_definitions(-DEVENTEM)
+
+    # set(pybind11_ROOT "C:/Users/Customer/.conda/envs/tpx_4DSTEM_env/Lib/site-packages/pybind11")
     find_package(pybind11 REQUIRED)
     find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
     # set(FFTW3_DIR ./FFTW)
     # link_directories(${FFTW3_DIR})
-
-    find_package(HDF5 REQUIRED COMPONENTS CXX)
+    
+    # set(HDF5_ROOT "Z:/Arno/HDF5/1.14.3")
+    set(HDF5_ROOT "C:/Program Files/HDF_Group/HDF5/1.14.3")
+    find_package(HDF5 1.14.3 REQUIRED COMPONENTS CXX)
 
     set(BUILD_DIR ${PROJECT_BINARY_DIR}/${CMAKE_BUILD_TYPE})
     message(STATUS "Build directory: ${BUILD_DIR}")
     add_definitions(-DNOMINMAX)
-    add_definitions(-DEVENTEM)
+    
 
     if (LOG)
         add_definitions(-DDBG_LOG)
@@ -148,9 +157,8 @@ if (WIN32)
     endif()
 
     pybind11_add_module(eventem ${SOURCES}) 
+    pybind11_add_module(pacbed ${SOURCES}) 
 
-    #build mmap.cpp to exe
-    add_executable(mmap ../EvenTem/src/mmap.cpp)
 
     if(GPRI_OPTION OR TORCH)
         target_include_directories(eventem PRIVATE ${TORCH_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS})
@@ -160,6 +168,9 @@ if (WIN32)
     if (PIXET)
         target_link_directories(eventem PRIVATE include)
         target_link_libraries(eventem PRIVATE pxcore.lib)
+
+        target_link_directories(pacbed PRIVATE include)
+        target_link_libraries(pacbed PRIVATE pxcore.lib)
     endif()
 
     # target_include_directories(eventem PRIVATE include ../EvenTem/src/core ../EvenTem/src/utils ../EvenTem/src/detectors)
@@ -167,9 +178,14 @@ if (WIN32)
     # target_link_libraries(eventem PRIVATE pybind11::module ${CMAKE_DL_LIBS} ws2_32)
     target_link_libraries(eventem PRIVATE ${Python3_LIBRARIES} ${CMAKE_DL_LIBS} ${HDF5_LIBRARIES} ws2_32) #libfftw3f-3
 
+    target_include_directories(pacbed PRIVATE include ../EvenTem/src/core ../EvenTem/src/utils ../EvenTem/src/detectors ${Python3_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS})
+    target_link_libraries(pacbed PRIVATE ${Python3_LIBRARIES} ${CMAKE_DL_LIBS} ${HDF5_LIBRARIES} ws2_32)
+
 endif (WIN32)
 #----------------------------------------------------------------------------------------------------------------
 if (APPLE)
+    add_definitions(-DEVENTEM)
+
     find_package(PkgConfig)
     find_package(pybind11 REQUIRED)
     find_package(HDF5 REQUIRED COMPONENTS CXX)
@@ -179,9 +195,9 @@ if (APPLE)
     set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
     if (GPRI_OPTION)
-        pybind11_add_module(eventemTorch ${SOURCES})
-        target_link_libraries(eventemTorch PRIVATE pybind11::module ${CMAKE_DL_LIBS})
-        target_include_directories(eventemTorch  PRIVATE include ../EvenTem/src/core ../EvenTem/src/utils ../EvenTem/src/detectors)
+        pybind11_add_module(eventem ${SOURCES})
+        target_link_libraries(eventem PRIVATE pybind11::module ${CMAKE_DL_LIBS})
+        target_include_directories(eventem  PRIVATE include ../EvenTem/src/core ../EvenTem/src/utils ../EvenTem/src/detectors)
     else()
         pybind11_add_module(eventem ${SOURCES})
         target_link_libraries(eventem PRIVATE pybind11::module ${CMAKE_DL_LIBS})
@@ -189,7 +205,6 @@ if (APPLE)
     endif()
 
     if (GPRI_OPTION)
-        add_definitions(-DEVENTEMTORCH)
         add_definitions(-DGPRI_OPTION_ENABLED)
         message(STATUS "GPRI support enabled")
         set(CMAKE_PREFIX_PATH "/Users/arnoannys/Programming/libtorch")
@@ -198,10 +213,8 @@ if (APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
         list(APPEND SOURCES ../EvenTem/src/core/GPRI.h ../EvenTem/src/core/GPRI.cpp)
-        target_link_libraries(eventemTorch PRIVATE ${TORCH_LIBRARIES})
-        target_include_directories(eventemTorch  PRIVATE ${TORCH_INCLUDE_DIRS})
-    else()
-        add_definitions(-DEVENTEM)
+        target_link_libraries(eventem PRIVATE ${TORCH_LIBRARIES})
+        target_include_directories(eventem  PRIVATE ${TORCH_INCLUDE_DIRS})
     endif()
 
     target_link_libraries(eventem PRIVATE ${HDF5_LIBRARIES} pybind11::module ${CMAKE_DL_LIBS})
@@ -211,6 +224,8 @@ if (APPLE)
 endif (APPLE) 
 #----------------------------------------------------------------------------------------------------------------
 if (UNIX AND NOT APPLE)
+    add_definitions(-DEVENTEM)
+
     set(pybind11_ROOT "/usr")
     find_package(PkgConfig)
     find_package(pybind11 REQUIRED)
@@ -252,37 +267,19 @@ if (UNIX AND NOT APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")  
     endif()  
 
-
-    if(GPRI_OPTION)
-        add_definitions(-DEVENTEMTORCH)
-
-        if (USE_CUDA)
-            enable_language(CUDA)
-
-            list(INSERT SOURCES 0 ../EvenTem/src/core/GPRI.h ../EvenTem/src/core/GPRI.cpp ../EvenTem/src/core/GPRI.cu)
-        endif()
-
-    else()
-        add_definitions(-DEVENTEM)
-    endif()
+    pybind11_add_module(eventem ${SOURCES})
+    target_include_directories(eventem PRIVATE include ../EvenTem/src/core ../EvenTem/src/utils ../EvenTem/src/detectors ${HDF5_INCLUDE_DIRS})
+    target_link_libraries(eventem PRIVATE pybind11::module ${HDF5_LIBRARIES})
 
 
     if (GPRI_OPTION AND USE_CUDA)
-        pybind11_add_module(eventemTorch ${SOURCES})
-        target_include_directories(eventemTorch PRIVATE include ../EvenTem/src/core ../EvenTem/src/utils ../EvenTem/src/detectors)
-        target_link_libraries(eventemTorch PRIVATE pybind11::module)
-    else()
-        pybind11_add_module(eventem ${SOURCES})
-        target_include_directories(eventem PRIVATE include ../EvenTem/src/core ../EvenTem/src/utils ../EvenTem/src/detectors)
-        target_link_libraries(eventem PRIVATE pybind11::module)
+        enable_language(CUDA)
+        list(INSERT SOURCES 0 ../EvenTem/src/core/GPRI.h ../EvenTem/src/core/GPRI.cpp ../EvenTem/src/core/GPRI.cu)
     endif()
         
-    target_include_directories(eventem PRIVATE ${HDF5_INCLUDE_DIRS})
-    target_link_libraries(eventem PRIVATE ${HDF5_LIBRARIES})
-    
     if(GPRI_OPTION)
-        target_include_directories(eventemTorch PRIVATE ${TORCH_INCLUDE_DIRS})
-        target_link_libraries(eventemTorch PRIVATE ${TORCH_LIBRARIES})
+        target_include_directories(eventem PRIVATE ${TORCH_INCLUDE_DIRS})
+        target_link_libraries(eventem PRIVATE ${TORCH_LIBRARIES})
 
         message(STATUS "Torch libraries: ${TORCH_LIBRARIES}")
         message(STATUS "Torch include directories: ${TORCH_INCLUDE_DIRS}")

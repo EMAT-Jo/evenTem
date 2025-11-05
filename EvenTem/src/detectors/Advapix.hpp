@@ -62,26 +62,26 @@ namespace ADVAPIX_ADDITIONAL
 #define PAR_PROCESSDATA         "ProcessData"
 #define PAR_TRG_STG             "TrgStg"
 #define BLOCKSIZE 50
-#define BUFFSIZE  5000
+#define BUFFSIZE  500
 struct CallbackData_t
 {
     int deviceIndex;
     int *p_n_buffer_filled;
     int *p_n_buffer_processed;
-    std::shared_ptr<Tpx3Pixel[]> (*p_ragged_buffer)[ADVAPIX_ADDITIONAL::N_BUFFER];
-    int (*p_ragged_buffer_sizes)[ADVAPIX_ADDITIONAL::N_BUFFER];
+    std::shared_ptr<Tpx3Pixel[]> *p_ragged_buffer;
+    int *p_ragged_buffer_sizes;
 };
 
 extern void OnTpx3Data(intptr_t eventData, intptr_t userData);
 #else
-struct Tpx3Pixel
+PACK(struct Tpx3Pixel
 {
     uint32_t index;
     uint64_t toa;
     uint8_t overflow;
     uint8_t ftoa;
     uint16_t tot;
-};
+});
 #endif
 
 template <typename event, int buffer_size, int n_buffer>
@@ -97,7 +97,7 @@ private:
     CallbackData_t *CallbackData;
     intptr_t CallbackDataAsIntPtr;
     bool trig = true;
-    int meausure_time = 5;
+    int meausure_time = 50;
 
     void connect()
     {
@@ -134,15 +134,17 @@ private:
         pxcSetDeviceParameter(deviceIndex, PAR_DDBUFFSIZE, BUFFSIZE); // in MegaBytes 1000
 
         CallbackData = new CallbackData_t{(int)deviceIndex, &this->n_buffer_filled, &this->n_buffer_processed};
-        p_ragged_buffer = new std::shared_ptr<Tpx3Pixel[]>[1][n_buffer];
+        p_ragged_buffer = new std::shared_ptr<Tpx3Pixel[]>[n_buffer];
+        p_ragged_buffer_sizes = new int[n_buffer];
         for (int i = 0; i < n_buffer; ++i){
-            (*p_ragged_buffer)[i] = std::shared_ptr<Tpx3Pixel[]>(new Tpx3Pixel[1], std::default_delete<Tpx3Pixel[]>());
-            (*CallbackData->p_ragged_buffer)[i] = (*p_ragged_buffer)[i];
+            p_ragged_buffer_sizes[i] = 0;
+            p_ragged_buffer[i] = nullptr;
         }
-        p_ragged_buffer_sizes = new int[1][n_buffer];
+        CallbackData->p_ragged_buffer = p_ragged_buffer;
         CallbackData->p_ragged_buffer_sizes = p_ragged_buffer_sizes;
         CallbackDataAsIntPtr = reinterpret_cast<intptr_t>(CallbackData);
 
+        std::cout<< "Callback registered"<< std::endl;
         if (trig == true) rc = pxcMeasureTpx3DataDrivenMode(deviceIndex, meausure_time, "", PXC_TRG_HWSTART, OnTpx3Data,CallbackDataAsIntPtr);
         else rc = pxcMeasureTpx3DataDrivenMode(deviceIndex, meausure_time, "", PXC_TRG_NO, OnTpx3Data,CallbackDataAsIntPtr);
     };
@@ -163,14 +165,15 @@ private:
                     switch (this->mode)
                     {
                         case 0:
+                            if (this->n_buffer_processed == 0) this->buffer[0][14336] = this->buffer[0][14335]; //this detector is a pain in the *ss
                             process_buffer(&(this->buffer[buffer_id]));
                             // process_mmap_buffer(static_cast<event*>(this->mmap_buffer[buffer_id]));
                             // event_parsing_pool->push_task([=]{process_buffer(&(this->buffer[buffer_id]));});
                             // event_parsing_pool->push_task([=]{process_mmap_buffer(static_cast<event*>(this->mmap_buffer[buffer_id]));});
                             break;
                         case 1:
-                            std::cout << (*p_ragged_buffer_sizes)[buffer_id] << std::endl;
-                            process_ragged_buffer((*p_ragged_buffer)[buffer_id],  (*p_ragged_buffer_sizes)[buffer_id]);
+                            std::cout << "processing buffer " << buffer_id << " of size " << p_ragged_buffer_sizes[buffer_id] << std::endl;
+                            if (!buffer_id == 0) process_ragged_buffer(p_ragged_buffer[buffer_id],  p_ragged_buffer_sizes[buffer_id]);
                             break;
                     }
                     if (this->decluster) {
@@ -196,6 +199,7 @@ private:
         for (int j = 0; j < size; j++)
         {
             if (!this->repetitions_reached) process_event(&p_buffer[j]);
+            // process_event(&p_buffer[j]);
         }
 
         if (!this->repetitions_reached) {
@@ -261,8 +265,6 @@ private:
             this->id_image = this->repetitions;
         }
     };
-
-    uint64_t latest_pp = 0;
     
     inline void process_event(event *packet)
     {
@@ -293,6 +295,9 @@ private:
                 break;
             case TIMEPIX<event, buffer_size, n_buffer>::FunctionType::com:
                 this->com(_probe_position_total%this->nxy,_kx,_ky,_id_image);
+                break;
+            case TIMEPIX<event, buffer_size, n_buffer>::FunctionType::tcBF:
+                this->tcBF(_probe_position_total%this->nxy,_kx,_ky,_id_image);
                 break;
             case TIMEPIX<event, buffer_size, n_buffer>::FunctionType::count_chunked_8: 
                 this->count_chunked_8(_probe_position_total%this->nxy,_kx,_ky,_id_image);
@@ -434,8 +439,8 @@ public:
         this->starttime  = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
     };
 
-    std::shared_ptr<Tpx3Pixel[]> (*p_ragged_buffer)[n_buffer];
-    int (*p_ragged_buffer_sizes)[n_buffer];
+    std::shared_ptr<Tpx3Pixel[]> *p_ragged_buffer;
+    int *p_ragged_buffer_sizes;
 
 
     ADVAPIX(

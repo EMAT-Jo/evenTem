@@ -39,24 +39,40 @@
 #include "BoundedThreadPool.hpp"
 #include "FrameBased.hpp"
 
+namespace MERLIN_514_U8{
+    const int N_CAM = 514;
+    const int BUFFER_SIZE = 512;
+    const int HEAD_SIZE = 768;
+    const int N_BUFFER = 32;
+    using PIXEL = uint8_t;
+}; 
+
 namespace MERLIN_512_U8{
     const int N_CAM = 512;
-    const int BUFFER_SIZE = 128;
+    const int BUFFER_SIZE = 512;
     const int HEAD_SIZE = 768;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
 }; 
 namespace MERLIN_256_U8{
     const int N_CAM = 256;
-    const int BUFFER_SIZE = 128;
+    const int BUFFER_SIZE = 512;
     const int HEAD_SIZE = 384;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
 };
 
+namespace MERLIN_514_U16{
+    const int N_CAM = 514;
+    const int BUFFER_SIZE = 512;
+    const int HEAD_SIZE = 768;
+    const int N_BUFFER = 32;
+    using PIXEL = uint16_t;
+};
+
 namespace MERLIN_512_U16{
     const int N_CAM = 512;
-    const int BUFFER_SIZE = 128;
+    const int BUFFER_SIZE = 512;
     const int HEAD_SIZE = 768;
     const int N_BUFFER = 32;
     using PIXEL = uint16_t;
@@ -64,10 +80,18 @@ namespace MERLIN_512_U16{
 
 namespace MERLIN_256_U16{
     const int N_CAM = 256;
-    const int BUFFER_SIZE = 128;
+    const int BUFFER_SIZE = 512;
     const int HEAD_SIZE = 384;
     const int N_BUFFER = 32;
     using PIXEL = uint16_t;
+};
+
+namespace MERLIN_514_U32{
+    const int N_CAM = 514;
+    const int BUFFER_SIZE = 128;
+    const int HEAD_SIZE = 768;
+    const int N_BUFFER = 32;
+    using PIXEL = uint32_t;
 };
 
 namespace MERLIN_512_U32{
@@ -96,19 +120,16 @@ protected:
     {
         int _buffer_id;
         int _frame_id;
-        data_size = static_cast<int>(ds_merlin * sizeof(pixel));
+        this->data_size = static_cast<int>(ds_merlin * sizeof(pixel));
         while (*this->p_processor_line!=-1)
         {
-            if ((this->n_frame_filled< (buffer_size*n_buffer + this->n_frame_processed))) 
+            if ((this->n_frame_filled < (buffer_size*n_buffer + this->n_frame_processed))) 
             {
                 _frame_id = this->n_frame_filled % buffer_size; 
                 _buffer_id = (this->n_frame_filled/buffer_size)%n_buffer;
-                read_frame(this->frame_buffer[_buffer_id][_frame_id], !this->first_frame);
-
-                this->first_frame = false;
-                ++this->n_frame_filled;
-                // this->n_frame_filled += 8; // 8 frames are read at once
-
+                read_frame(this->frame_buffer[_buffer_id][_frame_id]);
+                // this->n_frame_filled += buffer_size; //FULL BUFFER READ
+                 this->n_frame_filled +=1;
 
                 #ifdef GPRI_OPTION_ENABLED
                 if ((this->n_frame_filled%buffer_size == 0) && (this->n_buffer_filled < (n_buffer + this->n_buffer_processed))) 
@@ -133,18 +154,6 @@ protected:
 
         }
         this->file.close_file();
-    };
-
-
-    inline void read_head_file()
-    {
-        this->file.read_data(&head_buffer[0], head_buffer.size());
-    };
-    
-    inline void read_head_socket()
-    {
-        if (this->socket.read_data(&tcp_buffer[0], tcp_buffer.size()) == -1) perror("Merlin::read_head_socket(): Error reading TCP header from Socket!");
-        if (this->socket.read_data(&head_buffer[0], head_buffer.size()) == -1) perror("Merlin::read_head_socket(): Error reading Frame header from Socket!");
     };
 
     int read_aquisition_header()
@@ -186,19 +195,6 @@ protected:
         }
     }
 
-    inline void read_data_file(char *buffer, int data_size)
-    {
-        this->file.read_data(buffer, data_size);
-    };
-    
-    inline void read_data_socket(char *buffer, int data_size)
-    {
-        if (this->socket.read_data(buffer, data_size) == -1)
-        {
-            perror("Merlin::read_data_socket(): Error reading frame data from Socket!");
-        }
-    };
-
     template <typename T>
     inline void convert_binary_to_chars(std::array<T,n_cam*n_cam> &data)
     {
@@ -214,7 +210,7 @@ protected:
         }
     }
 
-    inline bool read_head(bool decode)
+    inline bool read_head()
     {
         switch (this->mode)
         {
@@ -222,11 +218,8 @@ protected:
             {
                 try
                 {
-                    read_head_file();
-                    if (decode)
-                    {
-                        decode_head();
-                    }
+                    this->file.read_data(&head_buffer[0], head_buffer.size());
+                    decode_head();
                     return true;
                 }
                 catch (const std::exception &e)
@@ -240,11 +233,9 @@ protected:
             {
                 try
                 {
-                    read_head_socket();
-                    if (decode)
-                    {
-                        decode_head();
-                    }
+                    if (this->socket.read_data(&tcp_buffer[0], tcp_buffer.size()) == -1) perror("Merlin::read_head_socket(): Error reading TCP header from Socket!");
+                    if (this->socket.read_data(&head_buffer[0], head_buffer.size()) == -1) perror("Merlin::read_head_socket(): Error reading Frame header from Socket!");
+                    decode_head();
                     return true;
                 }
                 catch (const std::exception &e)
@@ -273,6 +264,7 @@ protected:
         {
             try
             {
+                // ds_merlin = stoi(head[4]) * stoi(head[5]) + HEAD_SIZE/sizeof(pixel); // FULL BUFFER READ
                 ds_merlin = stoi(head[4]) * stoi(head[5]);
                 this->dtype = head[6];
             }
@@ -288,12 +280,9 @@ protected:
     }
 
 
-    inline void read_frame(std::array<pixel,n_cam*n_cam> &data, bool dump_head)
+    // inline void read_frame(std::array<pixel,n_cam*n_cam+HEAD_SIZE/sizeof(pixel)> &data) //FULL BUFFER READ
+    inline void read_frame(std::array<pixel,n_cam*n_cam> &data)
     {
-        if (dump_head)
-        {
-            read_head(false);
-        }
         char *buffer = reinterpret_cast<char *>(&data[0]);
         // if (b_binary)
         // {
@@ -303,16 +292,19 @@ protected:
         {
             case 0:
             {
-                read_data_file(buffer, data_size);
+                if (!first_frame) this->file.read_data(&head_buffer[0], head_buffer.size()); // the pain of mmapping the repeated headers :(
+                first_frame = false;
+                this->file.read_data(buffer, this->data_size);
+                // this->file.read_data(buffer, data_size*buffer_size); //FULL BUFFER READ
                 break;
             }
             case 1:
             {
-                read_data_socket(buffer, data_size);
+                if (this->socket.read_data(buffer, this->data_size) == -1) perror("Merlin::read_data_socket(): Error reading frame data from Socket!");
+                // if (this->socket.read_data(buffer, data_size*buffer_size) == -1) perror("Merlin::read_data_socket(): Error reading frame data from Socket!"); //FULL BUFFER READ
                 break;
             }
         }
-
         // if (b_binary)
         // {
         //     convert_binary_to_chars(data);
@@ -374,7 +366,7 @@ protected:
             }
         }
 
-        if (read_head(true))
+        if (read_head())
         {
             b_raw = false;
             b_binary = false;
@@ -425,6 +417,9 @@ public:
     void run()
     {
         this->reset();
+        // this->n_frame_filled = nx*(ny/2);
+        // this->n_frame_processed += 400;
+        // this->file.seek_to(nx*(ny/2)*(256*256+384));
         switch (this->mode)
         {
             case 0:

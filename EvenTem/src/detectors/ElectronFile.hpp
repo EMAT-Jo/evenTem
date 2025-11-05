@@ -37,8 +37,8 @@
 
 namespace ELECTRON_ADDITIONAL
 {
-    const size_t BUFFER_SIZE = 1048576;
-    const size_t N_BUFFER = 1024;
+    const size_t BUFFER_SIZE = 65536;
+    const size_t N_BUFFER = 512;
     PACK(struct EVENT
     {
         uint16_t kx;

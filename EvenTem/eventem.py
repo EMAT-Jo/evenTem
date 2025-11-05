@@ -105,7 +105,7 @@ class Pacbed(eventem.Pacbed):
         """
         2D numpy array : reconstructed image [nx,ny]
         """
-        return np.array(super().Pacbed_image).reshape(self.DetectorSize,self.DetectorSize).T # transpose due to difference with C++ convention
+        return np.array(super().Pacbed_image).reshape(self.DetectorSize,self.DetectorSize)
     
 
     def PlotImage(self,log=False):

@@ -27,6 +27,7 @@
 #include "core/Electron.h"
 #include "EELS.h"
 #include "FourD.h"
+#include "tcBF.h"
 
 #ifdef GPRI_OPTION_ENABLED
         #include "GPRI.h"
@@ -34,15 +35,15 @@
 
 namespace py = pybind11;
 
-#ifdef EVENTEM
-#define MODULE_NAME eventem
-#endif
-#ifdef EVENTEMTORCH
-#define MODULE_NAME eventemTorch
-#endif
+// #ifdef EVENTEM
+// #define MODULE_NAME eventem
+// #endif
+// #ifdef EVENTEMTORCH
+// #define MODULE_NAME eventemTorch
+// #endif
 
 
-PYBIND11_MODULE(MODULE_NAME, m) {
+PYBIND11_MODULE(eventem, m) {
 
         py::class_<LiveProcessor>(m, "LiveProcessor")
         .def_readwrite("nx", &LiveProcessor::nx)
@@ -77,6 +78,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readonly("offset", &Ricom::offset)
         .def("set_offset",&Ricom::set_offset)
         .def("get_kernel", &Ricom::get_kernel)
+        .def("set_mask", &Ricom::set_masked_com)
         .def_readonly("comx_image", &Ricom::comx_image)
         .def_readonly("comy_image", &Ricom::comy_image)
         .def_readonly("ricom_stack", &Ricom::ricom_image_stack)
@@ -95,14 +97,28 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("allow_torch", &vSTEM::allow_torch)
         .def_readwrite("allow_cuda", &vSTEM::allow_cuda)        
         .def_readonly("vSTEM_stack", &vSTEM::vSTEM_stack)
+        .def("get_image",[](vSTEM& self) {
+            return py::array_t<size_t>(
+                {self.nx, self.ny},
+                {sizeof(size_t) * self.ny, sizeof(size_t)},
+                self.vSTEM_image.data(),
+                py::cast(&self)
+            );
+        })
         .def_readonly("vSTEM_image", &vSTEM::vSTEM_image);
+
+        py::class_<tcBF,LiveProcessor>(m, "tcBF")
+        .def(py::init<int>(),py::arg("repetitions"))
+        .def("set_detector_mask", &tcBF::set_detector_mask)
+        .def("run", &tcBF::run)        
+        .def_readonly("tcBF_stack", &tcBF::tcBF_stack)
+        .def_readonly("BF_image", &tcBF::BF_image);
 
                 
         py::class_<FourD<8>, LiveProcessor>(m, "FourD8")
         .def(py::init<const std::string&, int, int,int>(), py::arg("output_filename"), py::arg("repetitions"), py::arg("bitdepth"),py::arg("compression_factor"))
         .def("run", &FourD<8>::run)
         .def("allocate_chunk", &FourD<8>::allocate_chunk)
-        // .def("save_dose_image", &FourD<8>::save_dose_image)
         .def("init_4D_file", &FourD<8>::init_4D_file)
         .def_readwrite("det_bin", &FourD<8>::det_bin)
         .def_readwrite("scan_bin", &FourD<8>::scan_bin)
@@ -114,7 +130,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def(py::init<const std::string&, int, int,int>(), py::arg("output_filename"), py::arg("repetitions"), py::arg("bitdepth"),py::arg("compression_factor"))
         .def("run", &FourD<16>::run)
         .def("allocate_chunk", &FourD<16>::allocate_chunk)
-        // .def("save_dose_image", &FourD<16>::save_dose_image)
         .def("init_4D_file", &FourD<16>::init_4D_file)
         .def_readwrite("det_bin", &FourD<16>::det_bin)
         .def_readwrite("scan_bin", &FourD<16>::scan_bin)
@@ -126,7 +141,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def(py::init<const std::string&, int, int,int>(), py::arg("output_filename"), py::arg("repetitions"), py::arg("bitdepth"),py::arg("compression_factor"))
         .def("run", &FourD<32>::run)
         .def("allocate_chunk", &FourD<32>::allocate_chunk)
-        // .def("save_dose_image", &FourD<32>::save_dose_image)
         .def("init_4D_file", &FourD<32>::init_4D_file)
         .def_readwrite("det_bin", &FourD<32>::det_bin)
         .def_readwrite("scan_bin", &FourD<32>::scan_bin)
@@ -136,7 +150,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
         #ifdef GPRI_OPTION_ENABLED
                 py::class_<GPRI,LiveProcessor>(m, "GPRI")
-                .def(py::init<int,std::string&,bool,bool>(),py::arg("repetitions"), py::arg("path_to_library"),py::arg("allow_cuda"),py::arg("allow_mps"))
+                .def(py::init<int,std::string&,bool>(),py::arg("repetitions"), py::arg("path_to_library"),py::arg("allow_cuda"))
                 .def("add_child", py::overload_cast<vSTEM*>(&GPRI::add_child))
                 .def("get_GPRI_result", &GPRI::get_GPRI_result)
                 .def("get_GPRI_stack_result", &GPRI::get_GPRI_stack_result)
@@ -196,11 +210,44 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("y_crop", &Electron::y_crop)
         .def_readwrite("scan_bin", &Electron::scan_bin)
         .def_readwrite("detector_bin", &Electron::detector_bin)
-        .def_readwrite("clustersize_histogram", &Electron::clustersize_histogram);
+        .def_readwrite("clustersize_histogram", &Electron::clustersize_histogram)
+        .def_readwrite("energy_histogram", &Electron::energy_histogram);
 
         py::class_<EELS,LiveProcessor>(m, "EELS")
         .def(py::init<int>(),py::arg("repetitions"))
         .def("run", &EELS::run)
         .def_readonly("EELS_data", &EELS::EELS_data);
 
+}
+
+
+PYBIND11_MODULE(pacbed, m) {
+
+        py::class_<LiveProcessor>(m, "LiveProcessor")
+        .def_readwrite("nx", &LiveProcessor::nx)
+        .def_readwrite("ny", &LiveProcessor::ny)
+        .def_readwrite("dt", &LiveProcessor::dt)
+        .def_readwrite("detector_size", &LiveProcessor::n_cam)
+        .def("set_socket", &LiveProcessor::set_socket)
+        .def("accept_socket", &LiveProcessor::accept_socket)
+        .def("close_socket", &LiveProcessor::close_socket)
+        .def_readwrite("n_threads", &LiveProcessor::n_threads)
+        .def_readwrite("file_path", &LiveProcessor::file_path)
+        .def_readwrite("repetitions", &LiveProcessor::rep)
+        .def("set_dwell_time", &LiveProcessor::set_dwell_time)
+        .def_readonly("progress", &LiveProcessor::progress_percent)
+        .def_readwrite("b_cumulative", &LiveProcessor::b_cumulative)   
+        .def_readwrite("b_continuous", &LiveProcessor::b_continuous)
+        .def_readwrite("rc_quit", &LiveProcessor::rc_quit)
+        .def_readonly("elapsed_seconds", &LiveProcessor::elapsed_seconds_vec)
+        .def_readonly("reached_pp_id", &LiveProcessor::reached_pp_id)
+        .def("set_pattern_file", &LiveProcessor::set_pattern_file)
+        .def_readonly("processing_rate", &LiveProcessor::processing_rate)
+        .def_readonly("processor_line", &LiveProcessor::processor_line)
+        .def("set_file", &LiveProcessor::set_file);
+
+        py::class_<Pacbed,LiveProcessor>(m, "Pacbed")
+        .def(py::init<int>(),py::arg("repetitions"))
+        .def("run", &Pacbed::run)
+        .def_readonly("Pacbed_image", &Pacbed::Pacbed_image);
 }

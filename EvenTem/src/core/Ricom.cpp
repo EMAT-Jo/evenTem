@@ -216,7 +216,8 @@ void Ricom::run()
                     file_path,
                     socket
                     );
-                    cam.enable_Ricom(&comx_image,&comy_image);
+                    if (!masked_com) cam.enable_Ricom(&comx_image,&comy_image);
+                    else cam.enable_Ricom_masked(&comx_image,&comy_image,&com_mask);
 
                     // for (vSTEM *child : vSTEM_children){
                     //     setup_child(child);
@@ -246,7 +247,8 @@ void Ricom::run()
                     file_path,
                     socket
                     );
-                    cam.enable_Ricom(&comx_image,&comy_image);
+                    if (!masked_com) cam.enable_Ricom(&comx_image,&comy_image);
+                    else cam.enable_Ricom_masked(&comx_image,&comy_image,&com_mask);
 
                     // for (vSTEM *child : vSTEM_children){
                     //     setup_child(child);
@@ -333,6 +335,24 @@ void Ricom::run()
                 }
                 else if (n_cam == 128) {
                     using namespace FRAME_128_U8;
+                    NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
+                    nx, 
+                    ny, 
+                    &b_cumulative,
+                    rep,
+                    processor_line,
+                    preprocessor_line,
+                    mode,
+                    file_path,
+                    socket
+                    );
+                    cam.enable_Ricom(&comx_image,&comy_image);
+                    cam.run();
+                    process_data();
+                    cam.terminate();
+                }
+                else if (n_cam == 192) {
+                    using namespace FRAME_192_U8;
                     NUMPY<N_CAM,BUFFER_SIZE,HEAD_SIZE,N_BUFFER,PIXEL> cam(
                     nx, 
                     ny, 
@@ -693,13 +713,16 @@ std::vector<float> Ricom::get_kernel()
     return kernel.kernel_x;
 }
 
-// void Ricom::set_masked_com(int radius, std::array<float, 2> offset)
-// {
-//     masked_com = true;
-//     detector.set_radia(0, radius);
-//     detector.compute_detector(n_cam, n_cam, offsets);
-//     com_mask = detector.detector_image;
-// }
+void Ricom::set_masked_com(int radius, std::array<float, 2> offset)
+{
+    masked_com = true;
+    std::vector<float> inner_r = {0};
+    std::vector<float> outer_r = {(float)radius};
+    std::vector<std::array<float, 2>> offsets = {offset};
+    detector.set_radia(inner_r, outer_r);
+    detector.compute_detector(n_cam, n_cam, offsets);
+    com_mask = detector.detector_image;
+}
 
 void Ricom::add_child(vSTEM* child)
 {

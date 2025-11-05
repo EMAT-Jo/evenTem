@@ -45,7 +45,7 @@
 
 namespace FRAME_64_U8{
     const int N_CAM = 64;
-    const int BUFFER_SIZE = 128;
+    const int BUFFER_SIZE = 1024;
     const int HEAD_SIZE = 0;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
@@ -53,7 +53,15 @@ namespace FRAME_64_U8{
 
 namespace FRAME_128_U8{
     const int N_CAM = 128;
-    const int BUFFER_SIZE = 128;
+    const int BUFFER_SIZE = 1024;
+    const int HEAD_SIZE = 0;
+    const int N_BUFFER = 32;
+    using PIXEL = uint8_t;
+}; 
+
+namespace FRAME_192_U8{
+    const int N_CAM = 192;
+    const int BUFFER_SIZE = 1024;
     const int HEAD_SIZE = 0;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
@@ -61,7 +69,7 @@ namespace FRAME_128_U8{
 
 namespace FRAME_256_U8{
     const int N_CAM = 256;
-    const int BUFFER_SIZE = 128;
+    const int BUFFER_SIZE = 512;
     const int HEAD_SIZE = 0;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
@@ -69,7 +77,7 @@ namespace FRAME_256_U8{
 
 namespace FRAME_512_U8{
     const int N_CAM = 512;
-    const int BUFFER_SIZE = 128;
+    const int BUFFER_SIZE = 512;
     const int HEAD_SIZE = 0;
     const int N_BUFFER = 32;
     using PIXEL = uint8_t;
@@ -190,23 +198,49 @@ protected:
         }
     }
 
+    void masked_com()
+    {
+        sum_x.assign(n_cam, 0);
+        sum_y.assign(n_cam, 0);
+        dose = 0;
+        COM[0] = 0;
+        COM[1] = 0;
+
+        for (int idy = 0; idy < n_cam; idy++)
+        {
+            sum_x_temp = 0;
+            for (int idx = 0; idx < n_cam; idx++)
+            {
+                current_px = (size_t)frame_buffer[buffer_id][frame_id][idy * n_cam + idx];
+                sum_x_temp += current_px * com_mask[idy * n_cam + idx];
+                sum_y[idx] += current_px * com_mask[idy * n_cam + idx];
+            }
+            sum_x[idy] = sum_x_temp;
+            dose += sum_x_temp;
+        }
+    
+        if (dose > 0)
+        {
+            for (int i = 0; i < n_cam; i++)
+            {
+                COM[0] += sum_x[i] * v[i];
+            }
+            for (int i = 0; i < n_cam; i++)
+            {
+                COM[1] += sum_y[i] * u[i];
+            }
+            (*p_comx_image)[probe_position] = COM[1] / dose;
+            (*p_comy_image)[probe_position] = COM[0] / dose;
+        }
+    }
+
     #ifdef GPRI_OPTION_ENABLED 
     void GPRI()
     {
-        
     };
 
     void SparseGPRI()
     {
-        for (int k = 0; k < n_cam*n_cam; k++){
-            if (frame_buffer[buffer_id][frame_id][k] != 0){
-                int _ky = k/n_cam;
-                int _kx = k%n_cam;
-                
-                (*p_k_indices_vec)[probe_position+id_image*GPRI_nxy_scan_bin]->push_back((_kx/GPRI_detector_bin)*GPRI_cam_bin+(_ky/GPRI_detector_bin));
-                (*p_N_electrons_map_scangrid)[id_image][probe_position] += 1;
-            }
-        }
     };
     #endif
 
@@ -276,10 +310,6 @@ protected:
                     this->frame_id = this->n_frame_processed % buffer_size;
                     // if ((this->n_frame_processed%nx) != (nx-1)){this->process[0]();}
                     if (this->n_frame_processed < nxy){this->process[0]();}
-                    // this->process[0]();
-                    // if ((this->n_frame_processed%nx) != (nx-1)){
-                    //     for (int i = 0; i < n_proc; i++) {this->process[i]();}
-                    // }
 
                     ++this->n_frame_processed;
                     this->probe_position = this->n_frame_processed % nxy;
@@ -371,6 +401,16 @@ public:
         init_uv();
         process.push_back(std::bind(&FRAMEBASED::com, this));
         ++n_proc;
+    };
+
+    void enable_Ricom_masked(std::vector<float> *_p_comx_image,std::vector<float> *_p_comy_image,std::vector<int> *_p_com_mask){
+        p_comx_image = _p_comx_image;
+        p_comy_image = _p_comy_image;
+        com_mask = *_p_com_mask;
+        init_uv();
+        process.push_back(std::bind(&FRAMEBASED::masked_com, this));
+        ++n_proc;
+        std::cout<< "using masked ricom" <<std::endl;
     };
     
     void enable_roi(std::vector<std::vector<uint64_t>> *_p_roi_scan_image_stack,
@@ -498,6 +538,7 @@ public:
         uint64_t frametime = ((endtime - starttime) / 1e3) / nxy;
         std::cout << "Processed at " << rate << " fps (" << frametime << " microsec per frame)" << std::endl; 
         std::cout << "read waits: " << read_wait << " process waits: " << process_wait << std::endl;
+        for (size_t i = 0; i < n_buffer; ++i) {delete [] frame_buffer[i];}
     };
 
 //-------------------------------------------------------------------------------------------------
@@ -528,6 +569,7 @@ public:
     std::vector<int> v;
     std::vector<float> *p_comx_image;
     std::vector<float> *p_comy_image;
+    std::vector<int> com_mask;
     std::vector<size_t> sum_x;
     std::vector<size_t> sum_y;
     float dose;
@@ -621,6 +663,7 @@ public:
     // Data Properties
     int data_size;
 
+    // typedef std::array<pixel,n_cam*n_cam+HEAD_SIZE/sizeof(pixel)> frame; //FULL BUFFER READ
     typedef std::array<pixel,n_cam*n_cam> frame;
 
     std::array<frame*, n_buffer> frame_buffer; 

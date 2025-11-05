@@ -1,0 +1,44 @@
+# Copyright (C) 2021 Thomas Friedrich, Chu-Ping Yu,
+# University of Antwerp - All Rights Reserved.
+# You may use, distribute and modify
+# this code under the terms of the GPL3 license.
+# You should have received a copy of the GPL3 license with
+# this file. If not, please visit:
+# https://www.gnu.org/licenses/gpl-3.0.en.html
+
+# Authors:
+#   Thomas Friedrich <>
+#   Chu-Ping Yu <>
+#   Arno Annys <>
+
+name: Compile
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  
+  build_Linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Get HDF5, pybind
+        run: |
+          sudo apt-get update
+          sudo apt-get install gcc-11 g++-11 HDF5 python-pybind11
+
+      - name: Build
+        env:
+          CC: gcc-11
+          CXX: g++-11
+        run: |
+
+          cmake -DGPRI_OPTION=OFF -D_TORCH=OFF -DPIXET=OFF -DLOG=OFF -DCMAKE_CUDA_FLAGS="--allow-unsupported-compiler" ../..
+          make -s
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Release_Linux
+          path: |
+            RICOM

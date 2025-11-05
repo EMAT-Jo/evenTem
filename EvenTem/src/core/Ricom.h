@@ -91,7 +91,7 @@ public:
 
     // bool b_recompute_detector;
     bool b_recompute_kernel = false;
-    bool masked_com;
+    bool masked_com = false;
 
     Ricom_kernel kernel;
     std::array<float, 2> offset = {0,0};
@@ -122,9 +122,9 @@ public:
     void set_offset(std::array<float, 2>);
     std::vector<float> get_kernel();
 
-    // void set_masked_com(int radius, std::array<float, 2> offset);
-    // std::vector<int> com_mask;
-    // AnnularDetector detector = AnnularDetector(0, 100);
+    void set_masked_com(int radius, std::array<float, 2> offset);
+    std::vector<int> com_mask;
+    AnnularDetector detector = AnnularDetector(0, 100);
     // std::vector<std::array<float, 2>> offsets = {{256, 256}};
 
 

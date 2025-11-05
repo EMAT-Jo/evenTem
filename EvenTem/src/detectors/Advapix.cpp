@@ -38,8 +38,8 @@ inline void OnTpx3Data(intptr_t eventData, intptr_t userData)
 
     if (rc) return;
 
-    (*cbData->p_ragged_buffer)[*cbData->p_n_buffer_filled % n_buffer] = Tpx3Pixels;
-    (*cbData->p_ragged_buffer_sizes)[*cbData->p_n_buffer_filled % n_buffer] = pixelCount;
+    cbData->p_ragged_buffer[*cbData->p_n_buffer_filled % n_buffer] = Tpx3Pixels;
+    cbData->p_ragged_buffer_sizes[*cbData->p_n_buffer_filled % n_buffer] = pixelCount;
     (*cbData->p_n_buffer_filled)++;
     return;
 };
